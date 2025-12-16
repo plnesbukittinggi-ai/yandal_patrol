@@ -18,6 +18,11 @@ const App: React.FC = () => {
   const [loadingStatus, setLoadingStatus] = useState("Menghubungkan ke Database...");
   const [isSyncing, setIsSyncing] = useState(false);
   
+  // State untuk Login Admin
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+
   // State Data
   const [reports, setReports] = useState<ReportData[]>([]);
   const [masterData, setMasterData] = useState<Record<string, ULPData>>(INITIAL_DATA_ULP);
@@ -94,9 +99,25 @@ const App: React.FC = () => {
     }
   };
 
+  const handleAdminLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (adminPassword === 'Adminbkt') {
+      handleLogin(UserRole.ADMIN);
+      // Cleanup
+      setAdminPassword('');
+      setLoginError('');
+      setShowAdminLogin(false);
+    } else {
+      setLoginError('Password salah!');
+    }
+  };
+
   const handleLogout = () => {
     setRole(null);
     setView('LOGIN');
+    setShowAdminLogin(false);
+    setAdminPassword('');
+    setLoginError('');
   };
 
   const handleSaveReport = async (data: ReportData) => {
@@ -215,7 +236,7 @@ const App: React.FC = () => {
               alt="Logo PLN" 
               className="h-20 mx-auto mb-4 object-contain"
             />
-            <h1 className="text-3xl font-bold text-primary mb-2">Unit Layanan Bukittinggi</h1>
+            <h1 className="text-3xl font-bold text-primary mb-2">Unit Layanan Bukittinggi </h1>
             <p className="text-slate-500">Aplikasi Monitoring Yandal Patrol</p>
           </div>
           <div className="space-y-4">
@@ -236,15 +257,53 @@ const App: React.FC = () => {
                 <span className="px-2 bg-white text-slate-400">Atau</span>
               </div>
             </div>
-            <button 
-              onClick={() => handleLogin(UserRole.ADMIN)}
-              className="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-3 px-6 rounded-lg transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 2a1 1 0 00-1 1v1a1 1 0 002 0V3a1 1 0 00-1-1zM4 4h3a3 3 0 006 0h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm2.5 7a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm2.45 4a2.5 2.5 0 10-4.9 0h4.9zM12 9a1 1 0 100 2h3a1 1 0 100-2h-3zm-1 4a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1z" clipRule="evenodd" />
-              </svg>
-              Login sebagai Admin
-            </button>
+
+            {!showAdminLogin ? (
+                <button 
+                  onClick={() => setShowAdminLogin(true)}
+                  className="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-3 px-6 rounded-lg transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 2a1 1 0 00-1 1v1a1 1 0 002 0V3a1 1 0 00-1-1zM4 4h3a3 3 0 006 0h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm2.5 7a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm2.45 4a2.5 2.5 0 10-4.9 0h4.9zM12 9a1 1 0 100 2h3a1 1 0 100-2h-3zm-1 4a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1z" clipRule="evenodd" />
+                  </svg>
+                  Login sebagai Admin
+                </button>
+            ) : (
+                <form onSubmit={handleAdminLoginSubmit} className="bg-slate-50 p-4 rounded-lg border border-slate-200 animate-fade-in shadow-inner">
+                    <h3 className="text-sm font-semibold text-slate-700 mb-2">Verifikasi Admin</h3>
+                    <input 
+                        type="password"
+                        autoFocus
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent mb-2 outline-none ${loginError ? 'border-red-500 bg-red-50' : 'border-slate-300'}`}
+                        value={adminPassword}
+                        onChange={(e) => {
+                            setAdminPassword(e.target.value);
+                            setLoginError('');
+                        }}
+                        placeholder="Masukkan password..."
+                    />
+                    {loginError && <p className="text-xs text-red-500 mb-3 font-medium">{loginError}</p>}
+                    <div className="flex gap-2">
+                        <button 
+                            type="button"
+                            onClick={() => {
+                                setShowAdminLogin(false);
+                                setLoginError('');
+                                setAdminPassword('');
+                            }}
+                            className="flex-1 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors border border-slate-300 bg-white"
+                        >
+                            Batal
+                        </button>
+                        <button 
+                            type="submit"
+                            className="flex-1 py-2 text-sm font-bold bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors shadow-md"
+                        >
+                            Masuk
+                        </button>
+                    </div>
+                </form>
+            )}
           </div>
         </div>
       </div>
