@@ -94,6 +94,8 @@ const App: React.FC = () => {
     setRole(selectedRole);
     if (selectedRole === UserRole.ADMIN) {
       setView('DASHBOARD');
+    } else if (selectedRole === UserRole.GUEST) {
+      setView('TABLE');
     } else {
       setView('INPUT');
     }
@@ -236,7 +238,7 @@ const App: React.FC = () => {
               alt="Logo PLN" 
               className="h-20 mx-auto mb-4 object-contain"
             />
-            <h1 className="text-3xl font-bold text-primary mb-2">Unit Layanan Bukittinggi </h1>
+            <h1 className="text-3xl font-bold text-primary mb-2">Unit Layanan Bukittinggi</h1>
             <p className="text-slate-500">Aplikasi Monitoring Yandal Patrol</p>
           </div>
           <div className="space-y-4">
@@ -259,15 +261,27 @@ const App: React.FC = () => {
             </div>
 
             {!showAdminLogin ? (
-                <button 
-                  onClick={() => setShowAdminLogin(true)}
-                  className="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-3 px-6 rounded-lg transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 2a1 1 0 00-1 1v1a1 1 0 002 0V3a1 1 0 00-1-1zM4 4h3a3 3 0 006 0h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm2.5 7a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm2.45 4a2.5 2.5 0 10-4.9 0h4.9zM12 9a1 1 0 100 2h3a1 1 0 100-2h-3zm-1 4a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1z" clipRule="evenodd" />
-                  </svg>
-                  Login sebagai Admin
-                </button>
+                <>
+                    <button 
+                    onClick={() => setShowAdminLogin(true)}
+                    className="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-3 px-6 rounded-lg transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2"
+                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 2a1 1 0 00-1 1v1a1 1 0 002 0V3a1 1 0 00-1-1zM4 4h3a3 3 0 006 0h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm2.5 7a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm2.45 4a2.5 2.5 0 10-4.9 0h4.9zM12 9a1 1 0 100 2h3a1 1 0 100-2h-3zm-1 4a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1z" clipRule="evenodd" />
+                    </svg>
+                    Login sebagai Admin
+                    </button>
+
+                    <button 
+                    onClick={() => handleLogin(UserRole.GUEST)}
+                    className="w-full bg-white border-2 border-slate-200 hover:border-primary hover:text-primary text-slate-600 font-semibold py-3 px-6 rounded-lg transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 mt-2"
+                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    Tampilkan Data
+                    </button>
+                </>
             ) : (
                 <form onSubmit={handleAdminLoginSubmit} className="bg-slate-50 p-4 rounded-lg border border-slate-200 animate-fade-in shadow-inner">
                     <h3 className="text-sm font-semibold text-slate-700 mb-2">Verifikasi Admin</h3>
@@ -372,16 +386,18 @@ const App: React.FC = () => {
                 </button>
               </>
             )}
-            <button
-              onClick={() => setView('INPUT')}
-              className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                view === 'INPUT'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-              }`}
-            >
-              Input Data
-            </button>
+            {role !== UserRole.GUEST && (
+              <button
+                onClick={() => setView('INPUT')}
+                className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  view === 'INPUT'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                }`}
+              >
+                Input Data
+              </button>
+            )}
             <button
               onClick={() => setView('TABLE')}
               className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
@@ -411,7 +427,7 @@ const App: React.FC = () => {
             onInitDefault={handleInitDefault}
           />
         )}
-        {view === 'INPUT' && (
+        {view === 'INPUT' && role !== UserRole.GUEST && (
           <InputForm 
             onSubmit={handleSaveReport}
             onCancel={() => setView(role === UserRole.ADMIN ? 'DASHBOARD' : 'TABLE')}
@@ -422,14 +438,16 @@ const App: React.FC = () => {
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold text-slate-800">Daftar Laporan Penugasan</h2>
-              <button 
-                 onClick={() => setView('INPUT')}
-                 className="sm:hidden bg-primary text-white p-2 rounded-full shadow-lg"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-              </button>
+              {role !== UserRole.GUEST && (
+                <button 
+                  onClick={() => setView('INPUT')}
+                  className="sm:hidden bg-primary text-white p-2 rounded-full shadow-lg"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
+              )}
             </div>
             <DataTable reports={reports} />
           </div>
