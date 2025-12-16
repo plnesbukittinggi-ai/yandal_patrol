@@ -8,6 +8,9 @@ import { AdminSettings } from './components/AdminSettings';
 import { DATA_ULP as INITIAL_DATA_ULP } from './constants';
 import { api } from './services/api';
 
+// Konstanta untuk URL Logo. Ganti URL ini jika ingin mengubah logo aplikasi.
+const LOGO_URL = "https://plnes.co.id/_next/image?url=https%3A%2F%2Fcms.plnes.co.id%2Fuploads%2FLogo_HP_New_Temporary_09a9c5a521.png&w=750&q=75";
+
 const App: React.FC = () => {
   const [role, setRole] = useState<UserRole | null>(null);
   const [view, setView] = useState<ViewState>('LOGIN');
@@ -207,6 +210,11 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
         <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-slate-200">
           <div className="text-center mb-8">
+            <img 
+              src={LOGO_URL} 
+              alt="Logo PLN" 
+              className="h-20 mx-auto mb-4 object-contain"
+            />
             <h1 className="text-3xl font-bold text-primary mb-2">PLN ES Bukittinggi Task Monitor</h1>
             <p className="text-slate-500">Aplikasi Monitoring Yandal Patrol</p>
           </div>
@@ -257,12 +265,12 @@ const App: React.FC = () => {
       <header className="bg-white shadow-sm z-20 sticky top-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
-            <div className="flex items-center gap-2">
-               <div className="bg-primary p-1.5 rounded text-white">
-                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-               </div>
+            <div className="flex items-center gap-3">
+               <img 
+                 src={LOGO_URL} 
+                 alt="Logo" 
+                 className="h-10 w-auto object-contain"
+               />
               <span className="font-bold text-xl text-slate-800 tracking-tight hidden sm:block">PLN ES Bukittinggi</span>
               <span className="font-bold text-xl text-slate-800 tracking-tight sm:hidden">PLN ES</span>
             </div>
