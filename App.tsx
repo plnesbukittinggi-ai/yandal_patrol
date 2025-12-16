@@ -215,7 +215,7 @@ const App: React.FC = () => {
               alt="Logo PLN" 
               className="h-20 mx-auto mb-4 object-contain"
             />
-            <h1 className="text-3xl font-bold text-primary mb-2">UL Bukittinggi Task Monitor</h1>
+            <h1 className="text-3xl font-bold text-primary mb-2">Unit Layanan Bukittinggi</h1>
             <p className="text-slate-500">Aplikasi Monitoring Yandal Patrol</p>
           </div>
           <div className="space-y-4">
@@ -271,7 +271,7 @@ const App: React.FC = () => {
                  alt="Logo" 
                  className="h-10 w-auto object-contain"
                />
-              <span className="font-bold text-xl text-slate-800 tracking-tight hidden sm:block">UL Bukittinggi</span>
+              <span className="font-bold text-xl text-slate-800 tracking-tight hidden sm:block">Unit Layanan Bukittinggi</span>
               <span className="font-bold text-xl text-slate-800 tracking-tight sm:hidden">PLN ES</span>
             </div>
             <div className="flex items-center gap-4">
