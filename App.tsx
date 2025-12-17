@@ -345,7 +345,7 @@ const App: React.FC = () => {
                  className="h-10 w-auto object-contain"
                />
               <span className="font-bold text-xl text-slate-800 tracking-tight hidden sm:block">Unit Layanan Bukittinggi</span>
-              <span className="font-bold text-xl text-slate-800 tracking-tight sm:hidden">PLN ES</span>
+              <span className="font-bold text-xl text-slate-800 tracking-tight sm:hidden">Unit Layanan Bukittinggi</span>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-slate-500 hidden sm:block">Logged in as <span className="font-semibold text-slate-900">{role}</span></span>
