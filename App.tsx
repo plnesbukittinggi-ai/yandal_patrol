@@ -436,7 +436,7 @@ const App: React.FC = () => {
                     </div>
                   </div>
                   <h1 className="text-3xl font-extrabold mb-2">Aplikasi Monitoring Yandal Patrol</h1>
-                  <p className="text-cyan-100 font-medium">Monitoring Digital Pelaksanaan Pekerjaan Yandal</p>
+                  <p className="text-cyan-100 font-medium">Monitoring Digital Pelaksanaan Pekerjaan Yandal Patrol</p>
                </div>
                
                <div className="p-8 md:p-12 space-y-10">
