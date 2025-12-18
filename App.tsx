@@ -196,8 +196,7 @@ const App: React.FC = () => {
 
             <h2 className="text-2xl font-bold text-primary mb-1">Aplikasi Monitoring</h2>
             <h2 className="text-2xl font-bold text-primary mb-2">Yandal Patrol</h2>
-            <p className="text-slate-500 text-sm">Monitoring Pelaksanaan Pekerjaan Yandal</p>
-          </div>
+            </div>
           <div className="space-y-4">
             <button 
               onClick={() => handleLogin(UserRole.USER)}
