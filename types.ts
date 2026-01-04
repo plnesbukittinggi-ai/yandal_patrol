@@ -39,4 +39,10 @@ export interface ULPData {
   penyulang: string[];
 }
 
-export type ViewState = 'LOGIN' | 'DASHBOARD' | 'INPUT' | 'TABLE' | 'SETTINGS' | 'ABOUT';
+export interface LoginSession {
+  ulp: ULPName | null;
+  petugas1: string | null;
+  petugas2: string | null;
+}
+
+export type ViewState = 'LOGIN' | 'CONFIG' | 'DASHBOARD' | 'INPUT' | 'TABLE' | 'SETTINGS' | 'ABOUT';
