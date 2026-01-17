@@ -147,7 +147,6 @@ const App: React.FC = () => {
   const fixBase64 = (str: string) => {
     if (!str || !str.includes(',')) return null;
     const [meta, data] = str.split(',');
-    // Perbaikan karakter ilegal spasi menjadi plus pada base64
     return meta + ',' + data.replace(/\s/g, '+');
   };
 
@@ -179,14 +178,37 @@ const App: React.FC = () => {
     }
   };
 
+  // Dinamis Loading ExcelJS jika script tag gagal/belum selesai dimuat
+  const ensureExcelJS = (): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      const existing = window.ExcelJS || (window as any).Excel;
+      if (existing) {
+        resolve(existing);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+      script.onload = () => resolve(window.ExcelJS || (window as any).Excel);
+      script.onerror = () => reject(new Error("Gagal memuat library ExcelJS"));
+      document.head.appendChild(script);
+    });
+  };
+
   const handleDownloadExcel = async () => {
-    // Mencoba akses global ExcelJS yang lebih fleksibel
-    const ExcelJS = window.ExcelJS || (window as any).Excel;
-    
-    if (!ExcelJS) {
-      alert("Library ExcelJS belum dimuat. Mohon pastikan koneksi internet stabil dan refresh halaman.");
+    let ExcelJS;
+    try {
+      ExcelJS = await ensureExcelJS();
+    } catch (err) {
+      alert("Library ExcelJS tidak dapat dimuat. Silahkan cek koneksi internet.");
       return;
     }
+
+    if (!ExcelJS) {
+      alert("Kesalahan kritis: Library ExcelJS tetap tidak ditemukan.");
+      return;
+    }
+
+    setIsSyncing(true); // Indikator proses jalan
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Laporan Patrol');
@@ -207,15 +229,12 @@ const App: React.FC = () => {
       { header: 'Finish', key: 'finish', width: 25 },
     ];
 
-    // Tambahkan 12 kolom foto (6 Sebelum, 6 Sesudah)
     for (let i = 1; i <= 6; i++) {
       columns.push({ header: `Foto Sebelum ${i}`, key: `sebelum_${i}`, width: 35 });
       columns.push({ header: `Foto Sesudah ${i}`, key: `sesudah_${i}`, width: 35 });
     }
 
     worksheet.columns = columns;
-
-    // Format header
     worksheet.getRow(1).font = { bold: true };
     worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
     worksheet.getRow(1).height = 25;
@@ -237,7 +256,6 @@ const App: React.FC = () => {
         finish: r.titikFinish,
       });
 
-      // Tinggi baris untuk mengakomodasi gambar setinggi 130px
       row.height = 110; 
       row.alignment = { vertical: 'middle', horizontal: 'center' };
       row.commit(); 
@@ -246,7 +264,6 @@ const App: React.FC = () => {
         const fotoSebelumUrl = r.photos?.sebelum?.[s];
         const fotoSesudahUrl = r.photos?.sesudah?.[s];
 
-        // Indeks kolom dimulai dari 10 (0-based) setelah data teks
         const colSebelum = 10 + s * 2;
         const colSesudah = 11 + s * 2;
 
@@ -303,8 +320,9 @@ const App: React.FC = () => {
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      console.error("Download Excel Error:", err);
       alert("Terjadi kesalahan saat mengolah file Excel.");
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -440,7 +458,7 @@ const App: React.FC = () => {
       {isSyncing && (
         <div className="fixed top-4 right-4 z-50 bg-white shadow-xl rounded-full px-5 py-2.5 flex items-center gap-2 border border-slate-200 animate-fade-in">
           <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-          <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Sinkronisasi...</span>
+          <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Memproses Dokumen...</span>
         </div>
       )}
 
