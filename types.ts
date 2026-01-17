@@ -45,4 +45,4 @@ export interface LoginSession {
   petugas2: string | null;
 }
 
-export type ViewState = 'LOGIN' | 'CONFIG' | 'DASHBOARD' | 'INPUT' | 'TABLE' | 'SETTINGS' | 'ABOUT';
+export type ViewState = 'LOGIN' | 'CONFIG' | 'DASHBOARD' | 'INPUT' | 'TABLE' | 'SETTINGS' | 'ABOUT' | 'REKAP';
