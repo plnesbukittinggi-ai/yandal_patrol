@@ -4,7 +4,7 @@ import { ReportData, ULPData } from '../types';
 // ==================================================================================
 // ⚠️ PENTING: GANTI URL DI BAWAH INI DENGAN URL DEPLOYMENT GOOGLE APPS SCRIPT ANDA
 // ==================================================================================
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4uVV-vGPeL0Peg-bdco6VL8zKAH8Z5N3ZBJo3bYEZt8IVHNkBAuKluLsQLlu7msQ/exec'; 
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxd3fmKldbMeRHOY6kEbfUn93DFvIhf50AbwM_g7FJysbqoRYq46SHoO2v0Gb1ZaBmy/exec'; 
 // Contoh: 'https://script.google.com/macros/s/AKfycbx.../exec'
 
 export const api = {
