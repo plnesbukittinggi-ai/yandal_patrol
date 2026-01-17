@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { ReportData } from '../types';
 
 interface DataTableProps {
@@ -7,127 +6,196 @@ interface DataTableProps {
 }
 
 export const DataTable: React.FC<DataTableProps> = ({ reports }) => {
+  const [previewImage, setPreviewImage] = useState<{ url: string } | null>(null);
+
   if (reports.length === 0) {
     return (
-      <div className="bg-white p-12 text-center rounded-xl shadow-sm border border-slate-200">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-slate-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-        <p className="text-slate-500">Belum ada data laporan yang masuk.</p>
+      <div className="bg-white p-12 text-center rounded-[2rem] shadow-sm border border-slate-200">
+        <p className="text-slate-500 font-black uppercase tracking-widest text-sm">
+          Belum ada data laporan
+        </p>
       </div>
     );
   }
 
-  // Helper untuk mengecek tipe link
-  const getImageLinkType = (str: string | null) => {
-    if (!str) return null;
-    if (str.startsWith('http')) return 'drive';
-    if (str.startsWith('data:image')) return 'local';
-    return null;
+  /* =====================================================
+   * FORMAT URL FOTO (Base64 / Google Drive / HTTPS)
+   * ===================================================== */
+  const formatImageUrl = (url: any): string => {
+    if (!url || typeof url !== 'string') return '';
+
+    const clean = url.trim();
+
+    // Base64
+    if (clean.startsWith('data:image')) {
+      const parts = clean.split(',');
+      return parts.length > 1
+        ? parts[0] + ',' + parts[1].replace(/\s/g, '+')
+        : clean;
+    }
+
+    // Google Drive
+    if (clean.includes('drive.google.com/file/d/')) {
+      const id = clean.split('/d/')[1]?.split('/')[0];
+      if (id) return `https://lh3.googleusercontent.com/d/${id}`;
+    }
+
+    return clean;
+  };
+
+  /* =====================================================
+   * VALIDASI FOTO (JANGAN TERLALU KETAT)
+   * ===================================================== */
+  const isValidImage = (str: any): boolean => {
+    if (!str || typeof str !== 'string') return false;
+
+    const s = str.trim();
+    return (
+      s.startsWith('data:image') ||
+      s.startsWith('http://') ||
+      s.startsWith('https://')
+    );
+  };
+
+  /* =====================================================
+   * KOMPONEN FOTO
+   * ===================================================== */
+  const PhotoCard = ({
+    url,
+    label,
+    type,
+  }: {
+    url: string;
+    label: string;
+    type: 'sebelum' | 'sesudah';
+  }) => {
+    const finalUrl = formatImageUrl(url);
+    if (!finalUrl) return null;
+
+    return (
+      <div
+        className="group relative flex flex-col items-center gap-1 cursor-pointer"
+        onClick={() => setPreviewImage({ url: finalUrl })}
+      >
+        <div
+          className={`w-10 h-10 rounded-lg border-2 overflow-hidden shadow-sm ${
+            type === 'sebelum'
+              ? 'border-amber-200 bg-amber-50'
+              : 'border-cyan-200 bg-cyan-50'
+          }`}
+        >
+          <img
+            src={finalUrl}
+            alt={label}
+            className="w-full h-full object-cover"
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            onError={() => {
+              console.error('Gagal load foto:', finalUrl);
+            }}
+          />
+        </div>
+        <span
+          className={`text-[6px] font-black uppercase tracking-tighter ${
+            type === 'sebelum' ? 'text-amber-600' : 'text-cyan-600'
+          }`}
+        >
+          {label}
+        </span>
+      </div>
+    );
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left text-slate-600">
-          <thead className="text-xs text-slate-700 uppercase bg-slate-50 border-b border-slate-200">
-            <tr>
-              <th className="px-6 py-4 font-semibold">Waktu</th>
-              <th className="px-6 py-4 font-semibold">No. Penugasan</th>
-              <th className="px-6 py-4 font-semibold">ULP / Petugas</th>
-              <th className="px-6 py-4 font-semibold">Lokasi</th>
-              <th className="px-6 py-4 font-semibold text-center">Dokumentasi</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {reports.map((report) => (
-              <tr key={report.id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap align-top">
-                  <div className="font-medium text-slate-900">{new Date(report.timestamp).toLocaleDateString('id-ID')}</div>
-                  <div className="text-xs text-slate-500">{new Date(report.timestamp).toLocaleTimeString('id-ID')}</div>
-                  <div className="mt-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600">
-                    {report.bulan}
-                  </div>
-                </td>
-                <td className="px-6 py-4 font-mono text-slate-700 align-top font-bold">
-                    {report.noPenugasan}
-                </td>
-                <td className="px-6 py-4 align-top">
-                  <div className="font-semibold text-primary">{report.ulp}</div>
-                  <div className="text-xs text-slate-500 mt-1">Penyulang: {report.penyulang}</div>
-                  <div className="mt-2 text-xs">
-                    <div className="font-medium text-slate-700">1. {report.petugas1}</div>
-                    <div className="font-medium text-slate-700">2. {report.petugas2}</div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 align-top">
-                   <div className="text-sm font-medium mb-1">Keypoint : {report.keypoint}</div>
-                  <div className="flex flex-col gap-1 text-xs">
-                    <div className="flex items-center gap-1 text-slate-500">
-                      <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                      Start: {report.titikStart}
-                    </div>
-                    <div className="flex items-center gap-1 text-slate-500">
-                      <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                      Finish: {report.titikFinish}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 align-top">
-                  <div className="flex flex-wrap gap-2 max-w-[200px] justify-center">
-                    {/* Foto Sebelum */}
-                    {report.photos.sebelum.map((url, idx) => {
-                        const type = getImageLinkType(url);
-                        if (!type) return null;
-                        return (
-                            <a 
-                                key={`seb-${idx}`} 
-                                href={url || '#'} 
-                                target="_blank" 
-                                rel="noreferrer"
-                                className={`px-2 py-1 text-xs rounded border transition-colors ${
-                                    type === 'drive' 
-                                    ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100' 
-                                    : 'bg-yellow-50 text-yellow-600 border-yellow-200 hover:bg-yellow-100'
-                                }`}
-                                title={type === 'local' ? 'Sedang diupload / Belum sync' : 'Link Google Drive'}
-                            >
-                                Sblm {idx + 1}
-                            </a>
-                        );
-                    })}
-                    {/* Foto Sesudah */}
-                    {report.photos.sesudah.map((url, idx) => {
-                        const type = getImageLinkType(url);
-                        if (!type) return null;
-                        return (
-                            <a 
-                                key={`ses-${idx}`} 
-                                href={url || '#'} 
-                                target="_blank" 
-                                rel="noreferrer"
-                                className={`px-2 py-1 text-xs rounded border transition-colors ${
-                                    type === 'drive' 
-                                    ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100' 
-                                    : 'bg-yellow-50 text-yellow-600 border-yellow-200 hover:bg-yellow-100'
-                                }`}
-                                title={type === 'local' ? 'Sedang diupload / Belum sync' : 'Link Google Drive'}
-                            >
-                                Ssdh {idx + 1}
-                            </a>
-                        );
-                    })}
-                    
-                    {!report.photos.sebelum.some(getImageLinkType) && !report.photos.sesudah.some(getImageLinkType) && (
-                         <span className="text-xs text-slate-400 italic">Tidak ada foto</span>
-                    )}
-                  </div>
-                </td>
+    <>
+      <div className="bg-white rounded-[2rem] shadow-xl border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left text-slate-600">
+            <thead className="text-[10px] text-slate-400 uppercase tracking-[0.2em] bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th className="px-8 py-6 font-black">Timeline</th>
+                <th className="px-6 py-6 font-black">Assignment</th>
+                <th className="px-6 py-6 font-black">Officer / Area</th>
+                <th className="px-6 py-6 font-black">Location Detail</th>
+                <th className="px-8 py-6 font-black text-center">Documentation</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {reports.map((report) => {
+                const validSebelum = report.photos.sebelum.filter(isValidImage);
+                const validSesudah = report.photos.sesudah.filter(isValidImage);
+
+                return (
+                  <tr key={report.id} className="hover:bg-slate-50/50">
+                    <td className="px-8 py-8 font-black">
+                      {new Date(report.timestamp).toLocaleDateString('id-ID')}
+                    </td>
+
+                    <td className="px-6 py-8 font-mono font-black">
+                      {report.noPenugasan}
+                    </td>
+
+                    <td className="px-6 py-8">
+                      <div className="font-black">{report.petugas1}</div>
+                      <div className="text-xs text-slate-400">
+                        {report.petugas2}
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-8 text-xs">
+                      {report.keypoint}
+                    </td>
+
+                    <td className="px-8 py-8">
+                      <div className="flex flex-col gap-3 items-center">
+                        {validSebelum.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 justify-center">
+                            {validSebelum.map((u, i) => (
+                              <PhotoCard
+                                key={`sb-${i}`}
+                                url={u}
+                                label={`FOTO ${i + 1}`}
+                                type="sebelum"
+                              />
+                            ))}
+                          </div>
+                        )}
+
+                        {validSesudah.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 justify-center">
+                            {validSesudah.map((u, i) => (
+                              <PhotoCard
+                                key={`sd-${i}`}
+                                url={u}
+                                label={`FOTO ${i + 1}`}
+                                type="sesudah"
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+
+      {/* PREVIEW FOTO */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 bg-slate-900/95 z-[100] flex items-center justify-center p-4"
+          onClick={() => setPreviewImage(null)}
+        >
+          <img
+            src={previewImage.url}
+            className="w-full max-w-md object-contain rounded-3xl bg-white"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+      )}
+    </>
   );
 };
