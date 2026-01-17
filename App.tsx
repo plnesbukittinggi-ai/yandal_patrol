@@ -147,6 +147,7 @@ const App: React.FC = () => {
   const fixBase64 = (str: string) => {
     if (!str || !str.includes(',')) return null;
     const [meta, data] = str.split(',');
+    // Perbaikan karakter ilegal spasi menjadi plus pada base64
     return meta + ',' + data.replace(/\s/g, '+');
   };
 
@@ -164,10 +165,12 @@ const App: React.FC = () => {
     try {
       const formattedUrl = formatDriveUrl(url);
       const response = await fetch(formattedUrl);
+      if (!response.ok) return null;
       const blob = await response.blob();
       return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => resolve(null);
         reader.readAsDataURL(blob);
       });
     } catch (e) {
@@ -177,12 +180,15 @@ const App: React.FC = () => {
   };
 
   const handleDownloadExcel = async () => {
-    if (!window.ExcelJS) {
-      alert("Library Excel belum dimuat. Silahkan refresh halaman.");
+    // Mencoba akses global ExcelJS yang lebih fleksibel
+    const ExcelJS = window.ExcelJS || (window as any).Excel;
+    
+    if (!ExcelJS) {
+      alert("Library ExcelJS belum dimuat. Mohon pastikan koneksi internet stabil dan refresh halaman.");
       return;
     }
 
-    const workbook = new window.ExcelJS.Workbook();
+    const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Laporan Patrol');
 
     // ===============================
@@ -191,32 +197,33 @@ const App: React.FC = () => {
     const columns: any[] = [
       { header: 'No', key: 'no', width: 5 },
       { header: 'Tanggal', key: 'tanggal', width: 15 },
-      { header: 'No. Penugasan', key: 'noPenugasan', width: 20 },
+      { header: 'No. Penugasan', key: 'noPenugasan', width: 25 },
       { header: 'ULP', key: 'ulp', width: 20 },
       { header: 'Petugas 1', key: 'petugas1', width: 20 },
       { header: 'Petugas 2', key: 'petugas2', width: 20 },
       { header: 'Penyulang', key: 'penyulang', width: 15 },
-      { header: 'Keypoint', key: 'keypoint', width: 20 },
-      { header: 'Start', key: 'start', width: 20 },
-      { header: 'Finish', key: 'finish', width: 20 },
+      { header: 'Keypoint', key: 'keypoint', width: 25 },
+      { header: 'Start', key: 'start', width: 25 },
+      { header: 'Finish', key: 'finish', width: 25 },
     ];
 
+    // Tambahkan 12 kolom foto (6 Sebelum, 6 Sesudah)
     for (let i = 1; i <= 6; i++) {
-      columns.push({ header: `Foto Sebelum ${i}`, key: `sebelum_${i}`, width: 32 });
-      columns.push({ header: `Foto Sesudah ${i}`, key: `sesudah_${i}`, width: 32 });
+      columns.push({ header: `Foto Sebelum ${i}`, key: `sebelum_${i}`, width: 35 });
+      columns.push({ header: `Foto Sesudah ${i}`, key: `sesudah_${i}`, width: 35 });
     }
 
     worksheet.columns = columns;
 
+    // Format header
     worksheet.getRow(1).font = { bold: true };
     worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+    worksheet.getRow(1).height = 25;
 
     // ===============================
-    // ADD DATA + IMAGES (Using for...of for Async Support)
+    // ADD DATA + IMAGES
     // ===============================
     for (const [index, r] of filteredReportsForTable.entries()) {
-      const rowIndex = index + 2;
-
       const row = worksheet.addRow({
         no: index + 1,
         tanggal: new Date(r.timestamp).toLocaleDateString('id-ID'),
@@ -230,7 +237,8 @@ const App: React.FC = () => {
         finish: r.titikFinish,
       });
 
-      row.height = 110; // Row height adjusted for image display
+      // Tinggi baris untuk mengakomodasi gambar setinggi 130px
+      row.height = 110; 
       row.alignment = { vertical: 'middle', horizontal: 'center' };
       row.commit(); 
 
@@ -238,8 +246,7 @@ const App: React.FC = () => {
         const fotoSebelumUrl = r.photos?.sebelum?.[s];
         const fotoSesudahUrl = r.photos?.sesudah?.[s];
 
-        // Column indices for photos (0-based for tl.col)
-        // Data base columns 0-9 (10 cols), so photos start at col 10
+        // Indeks kolom dimulai dari 10 (0-based) setelah data teks
         const colSebelum = 10 + s * 2;
         const colSesudah = 11 + s * 2;
 
@@ -256,7 +263,7 @@ const App: React.FC = () => {
                 ext: { width: 220, height: 130 }
               });
             }
-          } catch (e) { console.error(`Err Foto Sebelum ${s+1}`, e); }
+          } catch (e) {}
         }
 
         if (fotoSesudahUrl) {
@@ -272,7 +279,7 @@ const App: React.FC = () => {
                 ext: { width: 220, height: 130 }
               });
             }
-          } catch (e) { console.error(`Err Foto Sesudah ${s+1}`, e); }
+          } catch (e) {}
         }
       }
     }
@@ -297,7 +304,7 @@ const App: React.FC = () => {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Download Excel Error:", err);
-      alert("Gagal mengunduh file Excel.");
+      alert("Terjadi kesalahan saat mengolah file Excel.");
     }
   };
 
