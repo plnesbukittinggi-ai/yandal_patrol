@@ -1,10 +1,11 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { UserRole, ViewState, ReportData, ULPName, ULPData, LoginSession } from './types';
 import { InputForm } from './components/InputForm';
 import { Dashboard } from './components/Dashboard';
 import { DataTable } from './components/DataTable';
 import { AdminSettings } from './components/AdminSettings';
+import { AdminRekap } from './components/AdminRekap';
 import { LoginConfig } from './components/LoginConfig';
 import { DATA_ULP as INITIAL_DATA_ULP } from './constants';
 import { api } from './services/api';
@@ -26,6 +27,11 @@ const App: React.FC = () => {
 
   // Session State
   const [session, setSession] = useState<LoginSession>({ ulp: null, petugas1: null, petugas2: null });
+
+  // Filter Table State
+  const [tableStartDate, setTableStartDate] = useState('');
+  const [tableEndDate, setTableEndDate] = useState('');
+  const [tableUlpFilter, setTableUlpFilter] = useState<ULPName | ''>('');
 
   // Data State
   const [reports, setReports] = useState<ReportData[]>([]);
@@ -63,10 +69,8 @@ const App: React.FC = () => {
   const handleInitialRoleSelect = (selectedRole: UserRole) => {
     setRole(selectedRole);
     if (selectedRole === UserRole.ADMIN) {
-      // Admin stays password flow
       return; 
     }
-    // Guest and User go to Config
     setView('CONFIG');
   };
 
@@ -74,7 +78,7 @@ const App: React.FC = () => {
     e.preventDefault();
     if (adminPassword === 'Adminbkt') {
       setRole(UserRole.ADMIN);
-      setSession({ ulp: null, petugas1: null, petugas2: null }); // Admin has all access
+      setSession({ ulp: null, petugas1: null, petugas2: null }); 
       setView('DASHBOARD');
       setAdminPassword('');
       setLoginError('');
@@ -96,6 +100,9 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setRole(null);
     setSession({ ulp: null, petugas1: null, petugas2: null });
+    setTableStartDate('');
+    setTableEndDate('');
+    setTableUlpFilter('');
     setView('LOGIN');
     setShowAdminLogin(false);
     setAdminPassword('');
@@ -116,10 +123,28 @@ const App: React.FC = () => {
     }
   };
 
-  // Filtered reports based on current ULP selection
-  const filteredReports = reports.filter(r => 
-    !session.ulp || r.ulp === session.ulp
-  );
+  // Logic Filtering untuk Tabel Laporan
+  const filteredReportsForTable = useMemo(() => {
+    return reports.filter(r => {
+      // 1. Filter ULP dari Sesi (untuk Petugas/Guest)
+      const sessionMatch = !session.ulp || r.ulp === session.ulp;
+      if (!sessionMatch) return false;
+
+      // 2. Filter ULP Tambahan (khusus Admin di UI Tabel)
+      const adminUlpMatch = role !== UserRole.ADMIN || !tableUlpFilter || r.ulp === tableUlpFilter;
+      if (!adminUlpMatch) return false;
+
+      // 3. Filter Tanggal
+      const reportDate = new Date(r.timestamp).toISOString().split('T')[0];
+      const startMatch = !tableStartDate || reportDate >= tableStartDate;
+      const endMatch = !tableEndDate || reportDate <= tableEndDate;
+
+      return startMatch && endMatch;
+    });
+  }, [reports, session.ulp, role, tableUlpFilter, tableStartDate, tableEndDate]);
+
+  // Filtered reports for Dashboard (only session based)
+  const dashboardReports = reports.filter(r => !session.ulp || r.ulp === session.ulp);
 
   if (isLoading) {
     return (
@@ -224,7 +249,7 @@ const App: React.FC = () => {
       <header className="bg-white shadow-sm z-20 sticky top-0">
         <div className="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
             <div className="flex items-center gap-4">
-               <img src={LOGO_URL} alt="PLN" className="h-8 object-contain" onClick={() => setView('LOGIN')} />
+               <img src={LOGO_URL} alt="PLN" className="h-8 object-contain cursor-pointer" onClick={() => setView('LOGIN')} />
                <div className="w-px h-8 bg-slate-200 hidden sm:block"></div>
                <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('ABOUT')}>
                  <img src={APP_LOGO} alt="App" className="h-8 object-contain" />
@@ -241,21 +266,23 @@ const App: React.FC = () => {
           <nav className="-mb-px flex space-x-8 overflow-x-auto no-scrollbar">
             {role === UserRole.ADMIN && (
               <>
-                <button onClick={() => setView('DASHBOARD')} className={`pb-4 px-1 border-b-2 font-medium text-sm ${view === 'DASHBOARD' ? 'border-primary text-primary' : 'border-transparent text-slate-500'}`}>Dashboard</button>
-                <button onClick={() => setView('SETTINGS')} className={`pb-4 px-1 border-b-2 font-medium text-sm ${view === 'SETTINGS' ? 'border-primary text-primary' : 'border-transparent text-slate-500'}`}>Kelola Data</button>
+                <button onClick={() => setView('DASHBOARD')} className={`pb-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${view === 'DASHBOARD' ? 'border-primary text-primary' : 'border-transparent text-slate-500'}`}>Dashboard</button>
+                <button onClick={() => setView('REKAP')} className={`pb-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${view === 'REKAP' ? 'border-primary text-primary' : 'border-transparent text-slate-500'}`}>Rekap Petugas</button>
+                <button onClick={() => setView('SETTINGS')} className={`pb-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${view === 'SETTINGS' ? 'border-primary text-primary' : 'border-transparent text-slate-500'}`}>Kelola Data</button>
               </>
             )}
             {role !== UserRole.GUEST && (
-              <button onClick={() => setView('INPUT')} className={`pb-4 px-1 border-b-2 font-medium text-sm ${view === 'INPUT' ? 'border-primary text-primary' : 'border-transparent text-slate-500'}`}>Input Data</button>
+              <button onClick={() => setView('INPUT')} className={`pb-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${view === 'INPUT' ? 'border-primary text-primary' : 'border-transparent text-slate-500'}`}>Input Data</button>
             )}
-            <button onClick={() => setView('TABLE')} className={`pb-4 px-1 border-b-2 font-medium text-sm ${view === 'TABLE' ? 'border-primary text-primary' : 'border-transparent text-slate-500'}`}>Data Laporan</button>
-            <button onClick={() => setView('ABOUT')} className={`pb-4 px-1 border-b-2 font-medium text-sm ${view === 'ABOUT' ? 'border-primary text-primary' : 'border-transparent text-slate-500'}`}>Tentang</button>
+            <button onClick={() => setView('TABLE')} className={`pb-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${view === 'TABLE' ? 'border-primary text-primary' : 'border-transparent text-slate-500'}`}>Data Laporan</button>
+            <button onClick={() => setView('ABOUT')} className={`pb-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${view === 'ABOUT' ? 'border-primary text-primary' : 'border-transparent text-slate-500'}`}>Tentang</button>
           </nav>
         </div>
       </header>
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-8">
-        {view === 'DASHBOARD' && <Dashboard reports={filteredReports} />}
+        {view === 'DASHBOARD' && <Dashboard reports={dashboardReports} />}
+        {view === 'REKAP' && role === UserRole.ADMIN && <AdminRekap reports={reports} masterData={masterData} />}
         {view === 'SETTINGS' && role === UserRole.ADMIN && (
           <AdminSettings 
             masterData={masterData}
@@ -287,16 +314,60 @@ const App: React.FC = () => {
         )}
         {view === 'TABLE' && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
               <div>
                 <h2 className="text-2xl font-bold text-slate-800">Daftar Laporan Penugasan</h2>
                 {session.ulp && <p className="text-sm text-slate-500">Menampilkan data untuk unit: <b>{session.ulp}</b></p>}
               </div>
               {role !== UserRole.GUEST && (
-                <button onClick={() => setView('INPUT')} className="bg-primary text-white px-4 py-2 rounded-lg font-bold shadow-md hover:bg-cyan-800 transition-colors">Tambah Laporan</button>
+                <button onClick={() => setView('INPUT')} className="bg-primary text-white px-4 py-2 rounded-lg font-bold shadow-md hover:bg-cyan-800 transition-colors self-start">Tambah Laporan</button>
               )}
             </div>
-            <DataTable reports={filteredReports} />
+
+            {/* BARIS FILTER */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-4 animate-fade-in">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Dari Tanggal</label>
+                <input 
+                  type="date" 
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                  value={tableStartDate}
+                  onChange={(e) => setTableStartDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Sampai Tanggal</label>
+                <input 
+                  type="date" 
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                  value={tableEndDate}
+                  onChange={(e) => setTableEndDate(e.target.value)}
+                />
+              </div>
+              {role === UserRole.ADMIN && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Filter ULP</label>
+                  <select 
+                    className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm bg-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                    value={tableUlpFilter}
+                    onChange={(e) => setTableUlpFilter(e.target.value as ULPName)}
+                  >
+                    <option value="">Semua ULP</option>
+                    {Object.values(ULPName).map(u => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                </div>
+              )}
+              <div className={`flex items-end ${role !== UserRole.ADMIN ? 'md:col-span-2' : ''}`}>
+                <button 
+                  onClick={() => { setTableStartDate(''); setTableEndDate(''); setTableUlpFilter(''); }}
+                  className="w-full py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-md text-sm transition-colors border border-slate-200"
+                >
+                  Reset Filter
+                </button>
+              </div>
+            </div>
+
+            <DataTable reports={filteredReportsForTable} />
           </div>
         )}
         {view === 'ABOUT' && (
