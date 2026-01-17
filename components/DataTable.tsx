@@ -61,7 +61,7 @@ export const DataTable: React.FC<DataTableProps> = ({ reports }) => {
                   </div>
                 </td>
                 <td className="px-6 py-4 align-top">
-                   <div className="text-sm font-medium mb-1">KP: {report.keypoint}</div>
+                   <div className="text-sm font-medium mb-1">Keypoint : {report.keypoint}</div>
                   <div className="flex flex-col gap-1 text-xs">
                     <div className="flex items-center gap-1 text-slate-500">
                       <span className="w-2 h-2 rounded-full bg-green-500"></span>
