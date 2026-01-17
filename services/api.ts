@@ -11,7 +11,7 @@ export const api = {
   // Ambil semua data (Laporan & Master Data)
   getAllData: async () => {
     try {
-      if (GOOGLE_SCRIPT_URL === 'MASUKKAN_URL_DEPLOYMENT_ANDA_DISINI') {
+      if (GOOGLE_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbxd3fmKldbMeRHOY6kEbfUn93DFvIhf50AbwM_g7FJysbqoRYq46SHoO2v0Gb1ZaBmy/exec') {
           console.warn("URL Google Script belum diset di services/api.ts");
           return null;
       }
