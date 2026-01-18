@@ -383,8 +383,8 @@ const App: React.FC = () => {
           )}
           <div className="text-center mb-8">
             <img src={LOGO_URL} alt="Logo PLN" className="h-16 mx-auto mb-4 object-contain" />
-            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">PLN Electricity Services</h2>
-            <h1 className="text-lg font-extrabold text-slate-800 mb-6 uppercase tracking-tight">Unit Layanan Bukittinggi</h1>
+            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Unit Layanan Bukittinggi</h2>
+            <h1 className="text-lg font-extrabold text-slate-800 mb-6 uppercase tracking-tight"></h1>
             
             <div className="relative group mb-6">
               <img src={APP_LOGO} alt="Logo App" className="relative h-48 mx-auto object-contain transition-transform duration-500 hover:scale-110" />
