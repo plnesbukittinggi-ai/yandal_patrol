@@ -606,6 +606,11 @@ const App: React.FC = () => {
                     </div>
                   </div>
                   <h1 className="text-4xl font-black mb-3 tracking-tighter uppercase">Yandal Patrol Monitoring</h1>
+                 {/* APP VERSION BADGE */}
+                  <div className="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full mt-3 border border-white/30 flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-200 animate-pulse"></div>
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em]">Version {APP_VERSION}</span>
+                  </div>
                   <p className="text-cyan-100 font-black text-xs uppercase tracking-[0.3em] opacity-80">Digital Yandal Patrol System</p>
                </div>
                <div className="p-10 md:p-14 space-y-12">
