@@ -155,7 +155,7 @@ export const DataTable: React.FC<DataTableProps> = ({ reports }) => {
                       {/* BARIS ATAS: SEBELUM */}
                       <div className="flex flex-col gap-1 p-2 bg-amber-50/50 rounded-xl border border-amber-100/50 min-h-[60px]">
                         <div className="flex justify-between items-center px-1">
-                          <span className="text-[7px] font-black text-amber-600 uppercase tracking-widest">Baris Atas: Sebelum</span>
+                          <span className="text-[7px] font-black text-amber-600 uppercase tracking-widest">Foto Sebelum</span>
                           <span className="text-[6px] font-bold text-amber-400 uppercase">{validSebelum.length} Foto</span>
                         </div>
                         <div className="flex flex-wrap gap-1.5 justify-start">
@@ -177,7 +177,7 @@ export const DataTable: React.FC<DataTableProps> = ({ reports }) => {
                       {/* BARIS BAWAH: SESUDAH */}
                       <div className="flex flex-col gap-1 p-2 bg-cyan-50/50 rounded-xl border border-cyan-100/50 min-h-[60px]">
                         <div className="flex justify-between items-center px-1">
-                          <span className="text-[7px] font-black text-cyan-600 uppercase tracking-widest">Baris Bawah: Sesudah</span>
+                          <span className="text-[7px] font-black text-cyan-600 uppercase tracking-widest">Foto Sesudah</span>
                           <span className="text-[6px] font-bold text-cyan-400 uppercase">{validSesudah.length} Foto</span>
                         </div>
                         <div className="flex flex-wrap gap-1.5 justify-start">
