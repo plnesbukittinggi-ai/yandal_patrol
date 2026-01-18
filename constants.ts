@@ -1,4 +1,5 @@
 import { ULPName, ULPData } from './types';
+export const APP_VERSION = '1.0.3';
 
 export const DATA_ULP: Record<string, ULPData> = {
   [ULPName.BUKITTINGGI]: {
