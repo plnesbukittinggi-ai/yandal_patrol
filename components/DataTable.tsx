@@ -30,7 +30,6 @@ export const DataTable: React.FC<DataTableProps> = ({ reports }) => {
     if (clean.startsWith('data:image')) {
       const parts = clean.split(',');
       if (parts.length > 1) {
-        // Hanya ganti spasi di bagian data (setelah koma)
         return parts[0] + ',' + parts[1].replace(/\s/g, '+');
       }
       return clean;
@@ -68,14 +67,14 @@ export const DataTable: React.FC<DataTableProps> = ({ reports }) => {
 
     return (
       <div
-        className="group relative flex flex-col items-center gap-1 cursor-pointer"
+        className="group relative flex flex-col items-center gap-0.5 cursor-pointer"
         onClick={() => setPreviewImage({ url: finalUrl })}
       >
         <div
-          className={`w-10 h-10 rounded-lg border-2 overflow-hidden shadow-sm transition-transform group-hover:scale-110 ${
+          className={`w-12 h-12 rounded-lg border-2 overflow-hidden shadow-sm transition-transform group-hover:scale-110 ${
             type === 'sebelum'
-              ? 'border-amber-200 bg-amber-50'
-              : 'border-cyan-200 bg-cyan-50'
+              ? 'border-amber-300 bg-amber-50'
+              : 'border-cyan-300 bg-cyan-50'
           }`}
         >
           <img
@@ -90,7 +89,7 @@ export const DataTable: React.FC<DataTableProps> = ({ reports }) => {
           />
         </div>
         <span
-          className={`text-[6px] font-black uppercase tracking-tighter leading-none ${
+          className={`text-[5px] font-black uppercase tracking-tighter leading-none ${
             type === 'sebelum' ? 'text-amber-600' : 'text-cyan-600'
           }`}
         >
@@ -103,14 +102,14 @@ export const DataTable: React.FC<DataTableProps> = ({ reports }) => {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left text-slate-600">
+        <table className="w-full text-sm text-left text-slate-600 min-w-[800px]">
           <thead className="text-xs text-slate-700 uppercase bg-slate-50 border-b border-slate-200">
             <tr>
-              <th className="px-6 py-4 font-semibold">Waktu</th>
-              <th className="px-6 py-4 font-semibold">No. Penugasan</th>
+              <th className="px-6 py-4 font-semibold w-32">Waktu</th>
+              <th className="px-6 py-4 font-semibold w-40">No. Penugasan</th>
               <th className="px-6 py-4 font-semibold">ULP / Petugas</th>
               <th className="px-6 py-4 font-semibold">Lokasi</th>
-              <th className="px-6 py-4 font-semibold text-center">Dokumentasi</th>
+              <th className="px-6 py-4 font-semibold text-center w-64">Dokumentasi (Sblm / Ssdh)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -127,7 +126,7 @@ export const DataTable: React.FC<DataTableProps> = ({ reports }) => {
                       {report.bulan}
                     </div>
                   </td>
-                  <td className="px-6 py-4 font-mono text-slate-700 align-top font-bold">
+                  <td className="px-6 py-4 font-mono text-slate-700 align-top font-bold text-xs break-all">
                       {report.noPenugasan}
                   </td>
                   <td className="px-6 py-4 align-top">
@@ -151,39 +150,51 @@ export const DataTable: React.FC<DataTableProps> = ({ reports }) => {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 align-top">
-                    <div className="flex flex-col gap-4 items-center">
-                      {validSebelum.length > 0 && (
-                        <div className="flex flex-col items-center gap-1">
-                          <span className="text-[6px] font-black text-amber-500 uppercase tracking-widest">Sebelum</span>
-                          <div className="flex flex-wrap gap-1 justify-center max-w-[120px]">
-                            {validSebelum.map((u, i) => (
+                  <td className="px-4 py-4 align-top">
+                    <div className="flex flex-col gap-2 w-full">
+                      {/* BARIS ATAS: SEBELUM */}
+                      <div className="flex flex-col gap-1 p-2 bg-amber-50/50 rounded-xl border border-amber-100/50 min-h-[60px]">
+                        <div className="flex justify-between items-center px-1">
+                          <span className="text-[7px] font-black text-amber-600 uppercase tracking-widest">Baris Atas: Sebelum</span>
+                          <span className="text-[6px] font-bold text-amber-400 uppercase">{validSebelum.length} Foto</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 justify-start">
+                          {validSebelum.length > 0 ? (
+                            validSebelum.map((u, i) => (
                               <PhotoCard
                                 key={`sb-${report.id}-${i}`}
                                 url={u!}
-                                label={`FOTO ${i + 1}`}
+                                label={`SB-${i + 1}`}
                                 type="sebelum"
                               />
-                            ))}
-                          </div>
+                            ))
+                          ) : (
+                            <span className="text-[8px] italic text-slate-300 p-2">Tidak ada foto sebelum</span>
+                          )}
                         </div>
-                      )}
+                      </div>
 
-                      {validSesudah.length > 0 && (
-                        <div className="flex flex-col items-center gap-1">
-                          <span className="text-[6px] font-black text-cyan-500 uppercase tracking-widest">Sesudah</span>
-                          <div className="flex flex-wrap gap-1 justify-center max-w-[120px]">
-                            {validSesudah.map((u, i) => (
+                      {/* BARIS BAWAH: SESUDAH */}
+                      <div className="flex flex-col gap-1 p-2 bg-cyan-50/50 rounded-xl border border-cyan-100/50 min-h-[60px]">
+                        <div className="flex justify-between items-center px-1">
+                          <span className="text-[7px] font-black text-cyan-600 uppercase tracking-widest">Baris Bawah: Sesudah</span>
+                          <span className="text-[6px] font-bold text-cyan-400 uppercase">{validSesudah.length} Foto</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 justify-start">
+                          {validSesudah.length > 0 ? (
+                            validSesudah.map((u, i) => (
                               <PhotoCard
                                 key={`sd-${report.id}-${i}`}
                                 url={u!}
-                                label={`FOTO ${i + 1}`}
+                                label={`SS-${i + 1}`}
                                 type="sesudah"
                               />
-                            ))}
-                          </div>
+                            ))
+                          ) : (
+                            <span className="text-[8px] italic text-slate-300 p-2">Tidak ada foto sesudah</span>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -199,14 +210,22 @@ export const DataTable: React.FC<DataTableProps> = ({ reports }) => {
           className="fixed inset-0 bg-slate-900/95 backdrop-blur-sm z-[100] flex flex-col items-center justify-center p-4 animate-fade-in" 
           onClick={() => setPreviewImage(null)}
         >
-          <img 
-            src={previewImage.url} 
-            alt="Preview" 
-            className="w-full max-w-md aspect-square object-contain bg-slate-100 rounded-3xl shadow-2xl" 
-            referrerPolicy="no-referrer" 
-          />
-          <p className="text-white text-[10px] mt-4 font-bold uppercase tracking-widest">
-            Sentuh untuk menutup
+          <div className="relative w-full max-w-md">
+            <img 
+              src={previewImage.url} 
+              alt="Preview" 
+              className="w-full h-auto aspect-square object-contain bg-black rounded-3xl shadow-2xl border-4 border-white/10" 
+              referrerPolicy="no-referrer" 
+            />
+            <button 
+              className="absolute -top-4 -right-4 bg-red-500 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-xl font-bold"
+              onClick={() => setPreviewImage(null)}
+            >
+              ✕
+            </button>
+          </div>
+          <p className="text-white text-[10px] mt-6 font-black uppercase tracking-[0.3em] animate-pulse">
+            Ketuk di mana saja untuk kembali
           </p>
         </div>
       )}
