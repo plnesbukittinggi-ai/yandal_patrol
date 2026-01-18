@@ -388,8 +388,8 @@ const App: React.FC = () => {
           )}
           <div className="text-center mb-8">
             <img src={LOGO_URL} alt="Logo PLN" className="h-16 mx-auto mb-4 object-contain" />
-            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">PLN Electricity Services</h2>
-            <h1 className="text-lg font-extrabold text-slate-800 mb-6 uppercase tracking-tight">Unit Layanan Bukittinggi</h1>
+            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Unit Layanan Bukittinggi</h2>
+            <h1 className="text-lg font-extrabold text-slate-800 mb-6 uppercase tracking-tight"></h1>
             
             <div className="relative group mb-6">
               <img src={APP_LOGO} alt="Logo App" className="relative h-48 mx-auto object-contain transition-transform duration-500 hover:scale-110" />
@@ -606,7 +606,7 @@ const App: React.FC = () => {
                     </div>
                   </div>
                   <h1 className="text-4xl font-black mb-3 tracking-tighter uppercase">Yandal Patrol Monitoring</h1>
-                  <p className="text-cyan-100 font-black text-xs uppercase tracking-[0.3em] opacity-80">Digital Enforcement System</p>
+                  <p className="text-cyan-100 font-black text-xs uppercase tracking-[0.3em] opacity-80">Digital Yandal Patrol System</p>
                </div>
                <div className="p-10 md:p-14 space-y-12">
                   <section className="space-y-5">
@@ -618,7 +618,7 @@ const App: React.FC = () => {
                   </section>
                   <div className="pt-10 border-t border-slate-100 flex flex-col items-center gap-2">
                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.5em] mb-4">Official Platform</p>
-                    <p className="text-base font-black text-slate-800 uppercase tracking-widest">PLN Electricity Services Bukittinggi</p>
+                    <p className="text-base font-black text-slate-800 uppercase tracking-widest">PLN Electricity Services UL Bukittinggi</p>
                     <p className="text-[11px] text-slate-400 font-bold uppercase">© 2025 • IT Unit Layanan Bukittinggi</p>
                   </div>
                </div>
