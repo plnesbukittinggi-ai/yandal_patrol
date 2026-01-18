@@ -105,6 +105,22 @@ const App: React.FC = () => {
     setRole(null);
     setView('LOGIN');
     setShowAdminLogin(false);
+    setSession({ ulp: null, petugas1: null, petugas2: null });
+  };
+
+  const handleBackToMenu = () => {
+     if (view === 'CONFIG') {
+        setView('LOGIN');
+        setRole(null);
+     } else if (view === 'INPUT' || view === 'TABLE' || view === 'DASHBOARD' || view === 'REKAP' || view === 'SETTINGS' || view === 'ABOUT') {
+        // Jika Admin, balik ke Dashboard, jika User balik ke Login/Config
+        if (role === UserRole.ADMIN) {
+           setView('DASHBOARD');
+        } else {
+           setView('LOGIN');
+           setRole(null);
+        }
+     }
   };
 
   const handleSaveReport = async (data: ReportData) => {
@@ -129,16 +145,19 @@ const App: React.FC = () => {
   };
 
   const filteredReportsForTable = useMemo(() => {
-    return reports.filter(r => {
-      const sessionMatch = !session.ulp || r.ulp === session.ulp;
-      if (!sessionMatch) return false;
-      const adminUlpMatch = role !== UserRole.ADMIN || !tableUlpFilter || r.ulp === tableUlpFilter;
-      if (!adminUlpMatch) return false;
-      const reportDate = new Date(r.timestamp).toISOString().split('T')[0];
-      const startMatch = !tableStartDate || reportDate >= tableStartDate;
-      const endMatch = !tableEndDate || reportDate <= tableEndDate;
-      return startMatch && endMatch;
-    });
+    return reports
+      .filter(r => {
+        const sessionMatch = !session.ulp || r.ulp === session.ulp;
+        if (!sessionMatch) return false;
+        const adminUlpMatch = role !== UserRole.ADMIN || !tableUlpFilter || r.ulp === tableUlpFilter;
+        if (!adminUlpMatch) return false;
+        const reportDate = new Date(r.timestamp).toISOString().split('T')[0];
+        const startMatch = !tableStartDate || reportDate >= tableStartDate;
+        const endMatch = !tableEndDate || reportDate <= tableEndDate;
+        return startMatch && endMatch;
+      })
+      // SORT: Tanggal Terbaru ke Terlama
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [reports, session.ulp, role, tableUlpFilter, tableStartDate, tableEndDate]);
 
   // ===============================
@@ -178,7 +197,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Dinamis Loading ExcelJS jika script tag gagal/belum selesai dimuat
   const ensureExcelJS = (): Promise<any> => {
     return new Promise((resolve, reject) => {
       const existing = window.ExcelJS || (window as any).Excel;
@@ -208,14 +226,11 @@ const App: React.FC = () => {
       return;
     }
 
-    setIsSyncing(true); // Indikator proses jalan
+    setIsSyncing(true);
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Laporan Patrol');
 
-    // ===============================
-    // DEFINE COLUMNS
-    // ===============================
     const columns: any[] = [
       { header: 'No', key: 'no', width: 5 },
       { header: 'Tanggal', key: 'tanggal', width: 15 },
@@ -239,9 +254,6 @@ const App: React.FC = () => {
     worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
     worksheet.getRow(1).height = 25;
 
-    // ===============================
-    // ADD DATA + IMAGES
-    // ===============================
     for (const [index, r] of filteredReportsForTable.entries()) {
       const row = worksheet.addRow({
         no: index + 1,
@@ -301,9 +313,6 @@ const App: React.FC = () => {
       }
     }
 
-    // ===============================
-    // DOWNLOAD FILE
-    // ===============================
     const dateStr = new Date().toISOString().split('T')[0];
     const filename = `Laporan_Patrol_${tableUlpFilter || 'Semua_ULP'}_${dateStr}.xlsx`;
 
@@ -362,16 +371,6 @@ const App: React.FC = () => {
             >
               Gunakan Mode Demo (Offline)
             </button>
-          </div>
-          
-          <div className="mt-8 text-left bg-slate-50 p-5 rounded-2xl border border-slate-200">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Langkah Perbaikan Technical:</p>
-            <ol className="list-decimal list-inside space-y-2 text-[11px] text-slate-600 font-bold">
-              <li>Buka file <b>Google Apps Script</b> Anda.</li>
-              <li>Pilih menu <b>Deploy</b> &gt; <b>Manage Deployments</b>.</li>
-              <li>Klik ikon Pensil (Edit), pastikan "Who has access" adalah <span className="text-red-600">"Anyone"</span>.</li>
-              <li>Klik <b>Deploy</b>. Pastikan URL di <i>services/api.ts</i> sudah benar.</li>
-            </ol>
           </div>
         </div>
       </div>
@@ -447,7 +446,7 @@ const App: React.FC = () => {
         role={role} 
         masterData={masterData} 
         appLogo={APP_LOGO}
-        onBack={() => setView('LOGIN')}
+        onBack={() => { setView('LOGIN'); setRole(null); }}
         onConfirm={handleConfigConfirm}
       />
     );
@@ -458,15 +457,24 @@ const App: React.FC = () => {
       {isSyncing && (
         <div className="fixed top-4 right-4 z-50 bg-white shadow-xl rounded-full px-5 py-2.5 flex items-center gap-2 border border-slate-200 animate-fade-in">
           <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-          <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Memproses Dokumen...</span>
+          <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Memproses...</span>
         </div>
       )}
 
       <header className="bg-white shadow-sm z-20 sticky top-0">
         <div className="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
             <div className="flex items-center gap-4">
-               <img src={LOGO_URL} alt="PLN" className="h-8 object-contain cursor-pointer" onClick={() => setView('LOGIN')} />
-               <div className="w-px h-8 bg-slate-200 hidden sm:block"></div>
+               <button 
+                 onClick={handleBackToMenu}
+                 className="p-2 hover:bg-slate-100 rounded-full transition-all text-slate-600 group flex items-center gap-1"
+                 title="Kembali ke Menu Sebelumnya"
+               >
+                 <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                 </svg>
+                 <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">Kembali</span>
+               </button>
+               <div className="w-px h-8 bg-slate-200"></div>
                <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('ABOUT')}>
                  <img src={APP_LOGO} alt="App" className="h-8 object-contain" />
                  <div className="flex flex-col leading-none">
