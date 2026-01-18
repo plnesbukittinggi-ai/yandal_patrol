@@ -7,7 +7,7 @@ import { DataTable } from './components/DataTable';
 import { AdminSettings } from './components/AdminSettings';
 import { AdminRekap } from './components/AdminRekap';
 import { LoginConfig } from './components/LoginConfig';
-import { DATA_ULP as INITIAL_DATA_ULP } from './constants';
+import { DATA_ULP as INITIAL_DATA_ULP, APP_VERSION } from './constants';
 import { api } from './services/api';
 
 const LOGO_URL = "https://plnes.co.id/_next/image?url=https%3A%2F%2Fcms.plnes.co.id%2Fuploads%2FLogo_HP_New_Temporary_09a9c5a521.png&w=750&q=75"; 
@@ -113,7 +113,6 @@ const App: React.FC = () => {
         setView('LOGIN');
         setRole(null);
      } else if (view === 'INPUT' || view === 'TABLE' || view === 'DASHBOARD' || view === 'REKAP' || view === 'SETTINGS' || view === 'ABOUT') {
-        // Jika Admin, balik ke Dashboard, jika User balik ke Login/Config
         if (role === UserRole.ADMIN) {
            setView('DASHBOARD');
         } else {
@@ -156,13 +155,9 @@ const App: React.FC = () => {
         const endMatch = !tableEndDate || reportDate <= tableEndDate;
         return startMatch && endMatch;
       })
-      // SORT: Tanggal Terbaru ke Terlama
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [reports, session.ulp, role, tableUlpFilter, tableStartDate, tableEndDate]);
 
-  // ===============================
-  // HELPERS FOR EXCEL EXPORT
-  // ===============================
   const fixBase64 = (str: string) => {
     if (!str || !str.includes(',')) return null;
     const [meta, data] = str.split(',');
@@ -388,8 +383,8 @@ const App: React.FC = () => {
           )}
           <div className="text-center mb-8">
             <img src={LOGO_URL} alt="Logo PLN" className="h-16 mx-auto mb-4 object-contain" />
-            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Unit Layanan Bukittinggi</h2>
-            <h1 className="text-lg font-extrabold text-slate-800 mb-6 uppercase tracking-tight"></h1>
+            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">PLN Electricity Services</h2>
+            <h1 className="text-lg font-extrabold text-slate-800 mb-6 uppercase tracking-tight">Unit Layanan Bukittinggi</h1>
             
             <div className="relative group mb-6">
               <img src={APP_LOGO} alt="Logo App" className="relative h-48 mx-auto object-contain transition-transform duration-500 hover:scale-110" />
@@ -599,19 +594,21 @@ const App: React.FC = () => {
         {view === 'ABOUT' && (
           <div className="max-w-3xl mx-auto animate-fade-in">
             <div className="bg-white rounded-[2rem] shadow-xl overflow-hidden border border-slate-200">
-               <div className="bg-primary p-12 text-white text-center">
-                  <div className="flex justify-center mb-8">
-                    <div className="bg-white p-6 rounded-[2rem] shadow-2xl w-48 h-48 flex items-center justify-center">
-                      <img src={APP_LOGO} alt="App" className="h-36 w-auto object-contain" />
+               <div className="bg-primary p-12 text-white text-center flex flex-col items-center">
+                  <div className="flex justify-center mb-6">
+                    <div className="bg-white p-6 rounded-[2rem] shadow-2xl w-48 h-48 flex items-center justify-center relative overflow-hidden group">
+                      <img src={APP_LOGO} alt="App" className="h-36 w-auto object-contain z-10" />
                     </div>
                   </div>
-                  <h1 className="text-4xl font-black mb-3 tracking-tighter uppercase">Yandal Patrol Monitoring</h1>
-                 {/* APP VERSION BADGE */}
+                  <h1 className="text-4xl font-black mb-1 tracking-tighter uppercase">Yandal Patrol Monitoring</h1>
+                  
+                  {/* APP VERSION BADGE */}
                   <div className="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full mt-3 border border-white/30 flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-cyan-200 animate-pulse"></div>
                     <span className="text-[10px] font-black uppercase tracking-[0.3em]">Version {APP_VERSION}</span>
                   </div>
-                  <p className="text-cyan-100 font-black text-xs uppercase tracking-[0.3em] opacity-80">Digital Yandal Patrol System</p>
+
+                  <p className="text-cyan-100 font-black text-[9px] uppercase tracking-[0.4em] opacity-60 mt-6">Digital Yandal Patrol System</p>
                </div>
                <div className="p-10 md:p-14 space-y-12">
                   <section className="space-y-5">
@@ -623,7 +620,7 @@ const App: React.FC = () => {
                   </section>
                   <div className="pt-10 border-t border-slate-100 flex flex-col items-center gap-2">
                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.5em] mb-4">Official Platform</p>
-                    <p className="text-base font-black text-slate-800 uppercase tracking-widest">PLN Electricity Services UL Bukittinggi</p>
+                    <p className="text-base font-black text-slate-800 uppercase tracking-widest">PLN Electricity Services Bukittinggi</p>
                     <p className="text-[11px] text-slate-400 font-bold uppercase">© 2025 • IT Unit Layanan Bukittinggi</p>
                   </div>
                </div>
