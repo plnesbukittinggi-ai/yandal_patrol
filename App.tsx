@@ -39,6 +39,9 @@ const App: React.FC = () => {
 
   const [reports, setReports] = useState<ReportData[]>([]);
   const [masterData, setMasterData] = useState<Record<string, ULPData>>(INITIAL_DATA_ULP);
+  
+  // State untuk mode edit
+  const [editingReport, setEditingReport] = useState<ReportData | null>(null);
 
   useEffect(() => {
     const savedDemo = localStorage.getItem('yandal_demo_mode');
@@ -106,6 +109,7 @@ const App: React.FC = () => {
     setView('LOGIN');
     setShowAdminLogin(false);
     setSession({ ulp: null, petugas1: null, petugas2: null });
+    setEditingReport(null);
   };
 
   const handleBackToMenu = () => {
@@ -120,27 +124,45 @@ const App: React.FC = () => {
            setRole(null);
         }
      }
+     setEditingReport(null);
   };
 
   const handleSaveReport = async (data: ReportData) => {
     setIsSyncing(true);
     try {
       if (isDemoMode) {
-        const newReports = [data, ...reports];
+        let newReports;
+        if (editingReport) {
+          // Update existing
+          newReports = reports.map(r => r.id === data.id ? data : r);
+        } else {
+          // Add new
+          newReports = [data, ...reports];
+        }
         setReports(newReports);
         localStorage.setItem('yandal_local_reports', JSON.stringify(newReports));
       } else {
         await api.saveReport(data);
-        setReports(prev => [data, ...prev]);
+        if (editingReport) {
+           setReports(prev => prev.map(r => r.id === data.id ? data : r));
+        } else {
+           setReports(prev => [data, ...prev]);
+        }
         setTimeout(() => fetchData(false), 2000);
       }
-      alert('Laporan berhasil disimpan!');
+      alert(editingReport ? 'Laporan diperbarui!' : 'Laporan berhasil disimpan!');
+      setEditingReport(null);
       setView('TABLE');
     } catch (e) {
       alert("Gagal menyimpan ke server.");
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  const openEditForm = (report: ReportData) => {
+    setEditingReport(report);
+    setView('INPUT');
   };
 
   const filteredReportsForTable = useMemo(() => {
@@ -383,8 +405,8 @@ const App: React.FC = () => {
           )}
           <div className="text-center mb-8">
             <img src={LOGO_URL} alt="Logo PLN" className="h-16 mx-auto mb-4 object-contain" />
-            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Unit Layanan Bukittinggi</h2>
-            <h1 className="text-lg font-extrabold text-slate-800 mb-6 uppercase tracking-tight"></h1>
+            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">PLN Electricity Services</h2>
+            <h1 className="text-lg font-extrabold text-slate-800 mb-6 uppercase tracking-tight">Unit Layanan Bukittinggi</h1>
             
             <div className="relative group mb-6">
               <img src={APP_LOGO} alt="Logo App" className="relative h-48 mx-auto object-contain transition-transform duration-500 hover:scale-110" />
@@ -486,6 +508,7 @@ const App: React.FC = () => {
         
         <div className="max-w-7xl mx-auto px-4">
           <nav className="-mb-px flex space-x-8 overflow-x-auto no-scrollbar">
+            {/* Optimized nav tabs logic to avoid unintentional type comparison errors and ensure accessibility from all views */}
             {role === UserRole.ADMIN && (
               <>
                 <button onClick={() => setView('DASHBOARD')} className={`pb-4 px-1 border-b-4 font-black text-[10px] uppercase tracking-widest whitespace-nowrap ${view === 'DASHBOARD' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Dashboard</button>
@@ -493,7 +516,7 @@ const App: React.FC = () => {
                 <button onClick={() => setView('SETTINGS')} className={`pb-4 px-1 border-b-4 font-black text-[10px] uppercase tracking-widest whitespace-nowrap ${view === 'SETTINGS' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Kelola Data</button>
               </>
             )}
-            {role !== UserRole.GUEST && (
+            {role === UserRole.USER && (
               <button onClick={() => setView('INPUT')} className={`pb-4 px-1 border-b-4 font-black text-[10px] uppercase tracking-widest whitespace-nowrap ${view === 'INPUT' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Input Data</button>
             )}
             <button onClick={() => setView('TABLE')} className={`pb-4 px-1 border-b-4 font-black text-[10px] uppercase tracking-widest whitespace-nowrap ${view === 'TABLE' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Data Laporan</button>
@@ -529,9 +552,10 @@ const App: React.FC = () => {
         {view === 'INPUT' && role !== UserRole.GUEST && (
           <InputForm 
             onSubmit={handleSaveReport}
-            onCancel={() => setView('TABLE')}
+            onCancel={() => { setView('TABLE'); setEditingReport(null); }}
             masterData={masterData}
             sessionData={session}
+            editData={editingReport}
           />
         )}
         {view === 'TABLE' && (
@@ -546,7 +570,7 @@ const App: React.FC = () => {
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                     Refresh
                  </button>
-                 {role !== UserRole.GUEST && (
+                 {role === UserRole.USER && (
                     <button onClick={() => setView('INPUT')} className="bg-primary text-white px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-cyan-100 hover:bg-cyan-800 transition-all">Tambah Laporan</button>
                  )}
               </div>
@@ -588,7 +612,7 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <DataTable reports={filteredReportsForTable} />
+            <DataTable reports={filteredReportsForTable} onEdit={role !== UserRole.GUEST ? openEditForm : undefined} />
           </div>
         )}
         {view === 'ABOUT' && (
@@ -602,13 +626,12 @@ const App: React.FC = () => {
                   </div>
                   <h1 className="text-4xl font-black mb-1 tracking-tighter uppercase">Yandal Patrol Monitoring</h1>
                   
-                  {/* APP VERSION BADGE */}
                   <div className="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full mt-3 border border-white/30 flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-cyan-200 animate-pulse"></div>
                     <span className="text-[10px] font-black uppercase tracking-[0.3em]">Version {APP_VERSION}</span>
                   </div>
 
-                  <p className="text-cyan-100 font-black text-[9px] uppercase tracking-[0.4em] opacity-60 mt-6">Digital Yandal Patrol System</p>
+                  <p className="text-cyan-100 font-black text-[9px] uppercase tracking-[0.4em] opacity-60 mt-6">Digital Enforcement System</p>
                </div>
                <div className="p-10 md:p-14 space-y-12">
                   <section className="space-y-5">
