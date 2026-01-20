@@ -27,7 +27,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const resizeImage = (file: File): Promise<string> => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = (event) => {
@@ -35,28 +35,41 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
         img.src = event.target?.result as string;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 800;
+          // Optimasi resolusi gambar (400px cukup untuk bukti visual di spreadsheet/tabel)
+          const MAX_WIDTH = 400; 
           const scaleSize = MAX_WIDTH / img.width;
           canvas.width = MAX_WIDTH;
           canvas.height = img.height * scaleSize;
           const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', 0.7));
+          if (ctx) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'medium';
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          }
+          // Kualitas 0.5 menyeimbangkan antara kejernihan dan limit sel data
+          resolve(canvas.toDataURL('image/jpeg', 0.5));
         };
+        img.onerror = (err) => reject(err);
       };
+      reader.onerror = (err) => reject(err);
     });
   };
 
   const handlePhotoChange = async (index: number, type: 'sebelum' | 'sesudah', file: File) => {
-    const resizedImage = await resizeImage(file);
-    if (type === 'sebelum') {
-      const newPhotos = [...photosSebelum];
-      newPhotos[index] = resizedImage;
-      setPhotosSebelum(newPhotos);
-    } else {
-      const newPhotos = [...photosSesudah];
-      newPhotos[index] = resizedImage;
-      setPhotosSesudah(newPhotos);
+    try {
+      const resizedImage = await resizeImage(file);
+      if (type === 'sebelum') {
+        const newPhotos = [...photosSebelum];
+        newPhotos[index] = resizedImage;
+        setPhotosSebelum(newPhotos);
+      } else {
+        const newPhotos = [...photosSesudah];
+        newPhotos[index] = resizedImage;
+        setPhotosSesudah(newPhotos);
+      }
+    } catch (error) {
+      console.error("Gagal memproses foto:", error);
+      alert("Gagal memproses foto, silakan coba lagi.");
     }
   };
 
@@ -84,15 +97,16 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
       }
     };
 
+    // Simulate delay for smooth UI transition
     setTimeout(() => {
         onSubmit(newReport);
-    }, 100);
+    }, 500);
   };
 
   const ulpData = sessionData.ulp ? masterData[sessionData.ulp] : null;
 
   return (
-    <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+    <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden animate-fade-in mb-20">
       <div className="bg-primary px-6 py-4">
         <h2 className="text-xl font-bold text-white">Input Laporan Patrol</h2>
         <p className="text-primary-100 text-sm">Lokasi Tugas: {sessionData.ulp}</p>
@@ -192,7 +206,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
         <div className="border-t border-slate-200 pt-6">
           <div className="flex justify-between items-center mb-4">
              <h3 className="text-lg font-semibold text-slate-800">Dokumentasi Lapangan</h3>
-             <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">Foto Dokumentasi</span>
+             <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">Maksimal 12 Foto (6 Sebelum / 6 Sesudah)</span>
           </div>
           
           <div className="space-y-6">
@@ -218,19 +232,19 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-4 pt-4 border-t border-slate-200 sticky bottom-0 bg-white/95 backdrop-blur py-4 z-10">
+        <div className="flex items-center justify-end gap-4 pt-4 border-t border-slate-200 sticky bottom-0 bg-white/95 backdrop-blur py-4 z-10 px-6 -mx-6">
           <button 
             type="button" 
             onClick={onCancel}
             disabled={isSubmitting}
-            className="px-6 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-medium transition-colors"
+            className="px-6 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-black uppercase text-[10px] tracking-widest transition-colors"
           >
             Batal
           </button>
           <button 
             type="submit" 
             disabled={isSubmitting}
-            className="px-6 py-2 rounded-lg bg-primary text-white font-bold hover:bg-primary/90 shadow-lg shadow-primary/30 transition-all flex items-center gap-2"
+            className="px-8 py-2.5 rounded-xl bg-primary text-white font-black uppercase text-[10px] tracking-widest hover:bg-cyan-800 shadow-lg shadow-cyan-100 transition-all flex items-center gap-2 disabled:opacity-50"
           >
             {isSubmitting ? 'Mengirim...' : 'Simpan Laporan'}
           </button>
