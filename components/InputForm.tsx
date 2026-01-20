@@ -9,22 +9,22 @@ interface InputFormProps {
   onCancel: () => void;
   masterData: Record<string, ULPData>;
   sessionData: LoginSession;
+  editData?: ReportData | null;
 }
 
-export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, masterData, sessionData }) => {
-  const [noPenugasan, setNoPenugasan] = useState('');
-  const [penyulang, setPenyulang] = useState('');
-  const [keypoint, setKeypoint] = useState('');
-  const [titikStart, setTitikStart] = useState('');
-  const [titikFinish, setTitikFinish] = useState('');
+export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, masterData, sessionData, editData }) => {
+  const [noPenugasan, setNoPenugasan] = useState(editData?.noPenugasan || '');
+  const [penyulang, setPenyulang] = useState(editData?.penyulang || '');
+  const [keypoint, setKeypoint] = useState(editData?.keypoint || '');
+  const [titikStart, setTitikStart] = useState(editData?.titikStart || '');
+  const [titikFinish, setTitikFinish] = useState(editData?.titikFinish || '');
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Photos state
-  const [photosSebelum, setPhotosSebelum] = useState<(string | null)[]>(Array(6).fill(null));
-  const [photosSesudah, setPhotosSesudah] = useState<(string | null)[]>(Array(6).fill(null));
+  const [photosSebelum, setPhotosSebelum] = useState<(string | null)[]>(editData?.photos.sebelum || Array(6).fill(null));
+  const [photosSesudah, setPhotosSesudah] = useState<(string | null)[]>(editData?.photos.sesudah || Array(6).fill(null));
 
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(editData ? new Date(editData.timestamp) : new Date());
 
   const resizeImage = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -35,7 +35,6 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
         img.src = event.target?.result as string;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          // Optimasi resolusi gambar (400px cukup untuk bukti visual di spreadsheet/tabel)
           const MAX_WIDTH = 400; 
           const scaleSize = MAX_WIDTH / img.width;
           canvas.width = MAX_WIDTH;
@@ -46,7 +45,6 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
             ctx.imageSmoothingQuality = 'medium';
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
           }
-          // Kualitas 0.5 menyeimbangkan antara kejernihan dan limit sel data
           resolve(canvas.toDataURL('image/jpeg', 0.5));
         };
         img.onerror = (err) => reject(err);
@@ -80,13 +78,13 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
     setIsSubmitting(true);
 
     const newReport: ReportData = {
-      id: crypto.randomUUID(),
+      id: editData?.id || crypto.randomUUID(),
       timestamp: currentDate.toISOString(),
       bulan: MONTHS[currentDate.getMonth()],
       noPenugasan,
       ulp: sessionData.ulp,
-      petugas1: sessionData.petugas1 || 'N/A',
-      petugas2: sessionData.petugas2 || 'N/A',
+      petugas1: sessionData.petugas1 || editData?.petugas1 || 'N/A',
+      petugas2: sessionData.petugas2 || editData?.petugas2 || 'N/A',
       penyulang,
       keypoint,
       titikStart,
@@ -97,7 +95,6 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
       }
     };
 
-    // Simulate delay for smooth UI transition
     setTimeout(() => {
         onSubmit(newReport);
     }, 500);
@@ -108,8 +105,8 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
   return (
     <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden animate-fade-in mb-20">
       <div className="bg-primary px-6 py-4">
-        <h2 className="text-xl font-bold text-white">Input Laporan Patrol</h2>
-        <p className="text-primary-100 text-sm">Lokasi Tugas: {sessionData.ulp}</p>
+        <h2 className="text-xl font-bold text-white">{editData ? 'Edit Laporan Patrol' : 'Input Laporan Patrol'}</h2>
+        <p className="text-primary-100 text-sm">Lokasi Tugas: {sessionData.ulp || editData?.ulp}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="p-6 space-y-8">
@@ -118,15 +115,15 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
           <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
              <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">Unit Layanan</label>
-                <div className="mt-1 font-bold text-primary">{sessionData.ulp}</div>
+                <div className="mt-1 font-bold text-primary">{sessionData.ulp || editData?.ulp}</div>
              </div>
              <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">Petugas 1</label>
-                <div className="mt-1 font-semibold text-slate-800">{sessionData.petugas1 || '-'}</div>
+                <div className="mt-1 font-semibold text-slate-800">{sessionData.petugas1 || editData?.petugas1 || '-'}</div>
              </div>
              <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">Petugas 2</label>
-                <div className="mt-1 font-semibold text-slate-800">{sessionData.petugas2 || '-'}</div>
+                <div className="mt-1 font-semibold text-slate-800">{sessionData.petugas2 || editData?.petugas2 || '-'}</div>
              </div>
           </div>
 
@@ -246,7 +243,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
             disabled={isSubmitting}
             className="px-8 py-2.5 rounded-xl bg-primary text-white font-black uppercase text-[10px] tracking-widest hover:bg-cyan-800 shadow-lg shadow-cyan-100 transition-all flex items-center gap-2 disabled:opacity-50"
           >
-            {isSubmitting ? 'Mengirim...' : 'Simpan Laporan'}
+            {isSubmitting ? 'Mengupdate...' : editData ? 'Update Laporan' : 'Simpan Laporan'}
           </button>
         </div>
 
