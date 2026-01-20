@@ -21,11 +21,13 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({ label, imageSrc, onIma
   };
 
   const openGallery = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     galleryInputRef.current?.click();
   };
 
   const openCamera = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     cameraInputRef.current?.click();
   };
@@ -70,6 +72,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({ label, imageSrc, onIma
             <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pilih Sumber Foto</h5>
             <div className="flex gap-4 w-full px-4">
               <button 
+                type="button"
                 onClick={openCamera}
                 className="flex-1 bg-primary text-white p-4 rounded-2xl flex flex-col items-center gap-2 shadow-lg shadow-cyan-100 hover:bg-cyan-800 transition-all active:scale-95"
               >
@@ -80,6 +83,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({ label, imageSrc, onIma
               </button>
               
               <button 
+                type="button"
                 onClick={openGallery}
                 className="flex-1 bg-slate-100 text-slate-700 p-4 rounded-2xl flex flex-col items-center gap-2 border border-slate-200 hover:bg-slate-200 transition-all active:scale-95"
               >
@@ -90,6 +94,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({ label, imageSrc, onIma
               </button>
             </div>
             <button 
+              type="button"
               className="text-[9px] font-bold text-red-500 uppercase tracking-widest mt-2 px-4 py-2 hover:bg-red-50 rounded-xl transition-all"
               onClick={(e) => { e.stopPropagation(); setShowOptions(false); }}
             >
