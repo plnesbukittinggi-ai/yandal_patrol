@@ -4,9 +4,10 @@ import { ReportData } from '../types';
 
 interface DataTableProps {
   reports: ReportData[];
+  onEdit?: (report: ReportData) => void;
 }
 
-export const DataTable: React.FC<DataTableProps> = ({ reports }) => {
+export const DataTable: React.FC<DataTableProps> = ({ reports, onEdit }) => {
   const [previewImage, setPreviewImage] = useState<{ url: string } | null>(null);
 
   if (reports.length === 0) {
@@ -19,14 +20,9 @@ export const DataTable: React.FC<DataTableProps> = ({ reports }) => {
     );
   }
 
-  /* =====================================================
-   * FORMAT URL FOTO & PERBAIKAN KARAKTER ILEGAL
-   * ===================================================== */
   const formatImageUrl = (url: any): string => {
     if (!url || typeof url !== 'string') return '';
     let clean = url.trim();
-
-    // Base64 handling & fix illegal character (space back to +)
     if (clean.startsWith('data:image')) {
       const parts = clean.split(',');
       if (parts.length > 1) {
@@ -34,13 +30,10 @@ export const DataTable: React.FC<DataTableProps> = ({ reports }) => {
       }
       return clean;
     }
-
-    // Google Drive
     if (clean.includes('drive.google.com/file/d/')) {
       const id = clean.split('/d/')[1]?.split('/')[0];
       if (id) return `https://lh3.googleusercontent.com/d/${id}`;
     }
-
     return clean;
   };
 
@@ -50,9 +43,6 @@ export const DataTable: React.FC<DataTableProps> = ({ reports }) => {
     return s.startsWith('data:image') || s.startsWith('http');
   };
 
-  /* =====================================================
-   * KOMPONEN FOTO
-   * ===================================================== */
   const PhotoCard = ({
     url,
     label,
@@ -105,7 +95,7 @@ export const DataTable: React.FC<DataTableProps> = ({ reports }) => {
         <table className="w-full text-sm text-left text-slate-600 min-w-[800px]">
           <thead className="text-xs text-slate-700 uppercase bg-slate-50 border-b border-slate-200">
             <tr>
-              <th className="px-6 py-4 font-semibold w-32">Waktu</th>
+              <th className="px-6 py-4 font-semibold w-40">Waktu & Aksi</th>
               <th className="px-6 py-4 font-semibold w-40">No. Penugasan</th>
               <th className="px-6 py-4 font-semibold">ULP / Petugas</th>
               <th className="px-6 py-4 font-semibold">Lokasi</th>
@@ -120,10 +110,25 @@ export const DataTable: React.FC<DataTableProps> = ({ reports }) => {
               return (
                 <tr key={report.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap align-top">
-                    <div className="font-medium text-slate-900">{new Date(report.timestamp).toLocaleDateString('id-ID')}</div>
-                    <div className="text-xs text-slate-500">{new Date(report.timestamp).toLocaleTimeString('id-ID')} WIB</div>
-                    <div className="mt-1 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black bg-slate-100 text-slate-600 uppercase">
-                      {report.bulan}
+                    <div className="flex items-start gap-3">
+                      <div className="flex flex-col">
+                        <div className="font-medium text-slate-900">{new Date(report.timestamp).toLocaleDateString('id-ID')}</div>
+                        <div className="text-xs text-slate-500">{new Date(report.timestamp).toLocaleTimeString('id-ID')} WIB</div>
+                        <div className="mt-1 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black bg-slate-100 text-slate-600 uppercase">
+                          {report.bulan}
+                        </div>
+                      </div>
+                      {onEdit && (
+                        <button 
+                          onClick={() => onEdit(report)}
+                          className="p-2 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-primary hover:border-primary hover:shadow-sm transition-all"
+                          title="Edit Laporan"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 font-mono text-slate-700 align-top font-bold text-xs break-all">
@@ -152,10 +157,9 @@ export const DataTable: React.FC<DataTableProps> = ({ reports }) => {
                   </td>
                   <td className="px-4 py-4 align-top">
                     <div className="flex flex-col gap-2 w-full">
-                      {/* BARIS ATAS: SEBELUM */}
                       <div className="flex flex-col gap-1 p-2 bg-amber-50/50 rounded-xl border border-amber-100/50 min-h-[60px]">
                         <div className="flex justify-between items-center px-1">
-                          <span className="text-[7px] font-black text-amber-600 uppercase tracking-widest">Foto Sebelum</span>
+                          <span className="text-[7px] font-black text-amber-600 uppercase tracking-widest">Baris Atas: Sebelum</span>
                           <span className="text-[6px] font-bold text-amber-400 uppercase">{validSebelum.length} Foto</span>
                         </div>
                         <div className="flex flex-wrap gap-1.5 justify-start">
@@ -174,10 +178,9 @@ export const DataTable: React.FC<DataTableProps> = ({ reports }) => {
                         </div>
                       </div>
 
-                      {/* BARIS BAWAH: SESUDAH */}
                       <div className="flex flex-col gap-1 p-2 bg-cyan-50/50 rounded-xl border border-cyan-100/50 min-h-[60px]">
                         <div className="flex justify-between items-center px-1">
-                          <span className="text-[7px] font-black text-cyan-600 uppercase tracking-widest">Foto Sesudah</span>
+                          <span className="text-[7px] font-black text-cyan-600 uppercase tracking-widest">Baris Bawah: Sesudah</span>
                           <span className="text-[6px] font-bold text-cyan-400 uppercase">{validSesudah.length} Foto</span>
                         </div>
                         <div className="flex flex-wrap gap-1.5 justify-start">
@@ -204,7 +207,6 @@ export const DataTable: React.FC<DataTableProps> = ({ reports }) => {
         </table>
       </div>
 
-      {/* FITUR PREVIEW FOTO */}
       {previewImage && (
         <div 
           className="fixed inset-0 bg-slate-900/95 backdrop-blur-sm z-[100] flex flex-col items-center justify-center p-4 animate-fade-in" 
