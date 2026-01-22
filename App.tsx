@@ -40,7 +40,6 @@ const App: React.FC = () => {
   const [reports, setReports] = useState<ReportData[]>([]);
   const [masterData, setMasterData] = useState<Record<string, ULPData>>(INITIAL_DATA_ULP);
   
-  // State untuk mode edit
   const [editingReport, setEditingReport] = useState<ReportData | null>(null);
 
   useEffect(() => {
@@ -52,6 +51,13 @@ const App: React.FC = () => {
     }
     fetchData(true);
   }, []);
+
+  // Trigger Sinkronisasi Otomatis saat Filter Berubah (Autorefresh)
+  useEffect(() => {
+    if (view === 'TABLE' && !isDemoMode) {
+      fetchData(false);
+    }
+  }, [tableStartDate, tableEndDate, tableUlpFilter, view]);
 
   const fetchData = async (showLoading = true) => {
     if (isDemoMode) return;
@@ -133,22 +139,22 @@ const App: React.FC = () => {
       if (isDemoMode) {
         let newReports;
         if (editingReport) {
-          // Update existing
           newReports = reports.map(r => r.id === data.id ? data : r);
         } else {
-          // Add new
           newReports = [data, ...reports];
         }
         setReports(newReports);
         localStorage.setItem('yandal_local_reports', JSON.stringify(newReports));
       } else {
         await api.saveReport(data);
-        if (editingReport) {
-           setReports(prev => prev.map(r => r.id === data.id ? data : r));
-        } else {
-           setReports(prev => [data, ...prev]);
-        }
-        setTimeout(() => fetchData(false), 2000);
+        // Langsung update state lokal agar user melihat perubahan seketika
+        setReports(prev => {
+          const filtered = prev.filter(r => r.id !== data.id);
+          return [data, ...filtered];
+        });
+        
+        // Sinkronisasi ulang setelah jeda singkat untuk memastikan data spreadsheet benar
+        setTimeout(() => fetchData(false), 3000);
       }
       alert(editingReport ? 'Laporan diperbarui!' : 'Laporan berhasil disimpan!');
       setEditingReport(null);
@@ -165,8 +171,20 @@ const App: React.FC = () => {
     setView('INPUT');
   };
 
+  // Logika Filter dengan Deduplikasi (Menghindari Duplikat saat Edit)
   const filteredReportsForTable = useMemo(() => {
-    return reports
+    // 1. Deduplikasi berdasarkan ID (ambil yang paling baru berdasarkan timestamp)
+    const uniqueReportsMap = new Map<string, ReportData>();
+    reports.forEach(r => {
+      const existing = uniqueReportsMap.get(r.id);
+      if (!existing || new Date(r.timestamp) > new Date(existing.timestamp)) {
+        uniqueReportsMap.set(r.id, r);
+      }
+    });
+    const uniqueReportsList = Array.from(uniqueReportsMap.values());
+
+    // 2. Terapkan filter UI
+    return uniqueReportsList
       .filter(r => {
         const sessionMatch = !session.ulp || r.ulp === session.ulp;
         if (!sessionMatch) return false;
@@ -508,7 +526,6 @@ const App: React.FC = () => {
         
         <div className="max-w-7xl mx-auto px-4">
           <nav className="-mb-px flex space-x-8 overflow-x-auto no-scrollbar">
-            {/* Optimized nav tabs logic to avoid unintentional type comparison errors and ensure accessibility from all views */}
             {role === UserRole.ADMIN && (
               <>
                 <button onClick={() => setView('DASHBOARD')} className={`pb-4 px-1 border-b-4 font-black text-[10px] uppercase tracking-widest whitespace-nowrap ${view === 'DASHBOARD' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Dashboard</button>
@@ -566,9 +583,14 @@ const App: React.FC = () => {
                 {session.ulp && <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unit Layanan: <span className="text-primary">{session.ulp}</span></p>}
               </div>
               <div className="flex gap-2">
-                 <button onClick={() => fetchData(true)} className="bg-slate-200 text-slate-700 px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-300 transition-all flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                    Refresh
+                 <button 
+                  onClick={() => fetchData(true)} 
+                  className="bg-slate-200 text-slate-700 p-2.5 rounded-2xl hover:bg-slate-300 transition-all flex items-center justify-center group"
+                  title="Segarkan Data Secara Manual"
+                 >
+                    <svg className="w-5 h-5 group-active:rotate-180 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
                  </button>
                  {role === UserRole.USER && (
                     <button onClick={() => setView('INPUT')} className="bg-primary text-white px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-cyan-100 hover:bg-cyan-800 transition-all">Tambah Laporan</button>
@@ -604,9 +626,9 @@ const App: React.FC = () => {
                     className="w-full py-2.5 px-4 bg-green-600 hover:bg-green-700 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-lg shadow-green-100 transition-all flex items-center justify-center gap-2 whitespace-nowrap"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003 3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
-                    Download Excel
+                    Export Excel
                   </button>
                 )}
               </div>
