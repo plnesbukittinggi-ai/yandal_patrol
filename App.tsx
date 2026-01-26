@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { UserRole, ViewState, ReportData, ULPName, ULPData, LoginSession } from './types';
 import { InputForm } from './components/InputForm';
 import { Dashboard } from './components/Dashboard';
@@ -39,8 +39,9 @@ const App: React.FC = () => {
 
   const [reports, setReports] = useState<ReportData[]>([]);
   const [masterData, setMasterData] = useState<Record<string, ULPData>>(INITIAL_DATA_ULP);
-  
   const [editingReport, setEditingReport] = useState<ReportData | null>(null);
+
+  const pendingUpdatesRef = useRef<Map<string, string>>(new Map());
 
   useEffect(() => {
     const savedDemo = localStorage.getItem('yandal_demo_mode');
@@ -52,7 +53,6 @@ const App: React.FC = () => {
     fetchData(true);
   }, []);
 
-  // Trigger Sinkronisasi Otomatis saat Filter Berubah (Autorefresh)
   useEffect(() => {
     if (view === 'TABLE' && !isDemoMode) {
       fetchData(false);
@@ -68,24 +68,37 @@ const App: React.FC = () => {
     }
     try {
       const data = await api.getAllData();
-      if (data) {
-        if (data.reports) setReports(data.reports);
-        if (data.masterData) setMasterData(data.masterData);
+      if (data && data.reports) {
+        setReports(prevReports => {
+          const reportMap = new Map<string, ReportData>();
+          prevReports.forEach(r => reportMap.set(r.id, r));
+          
+          data.reports.forEach((serverReport: ReportData) => {
+            const pendingTimestamp = pendingUpdatesRef.current.get(serverReport.id);
+            if (pendingTimestamp && new Date(serverReport.timestamp) < new Date(pendingTimestamp)) {
+              return; 
+            }
+            reportMap.set(serverReport.id, serverReport);
+          });
+          
+          return Array.from(reportMap.values());
+        });
+        
+        if (data.masterData) {
+            // Ensure keypoints property exists to prevent runtime errors
+            const updatedMaster = { ...data.masterData };
+            Object.keys(updatedMaster).forEach(k => {
+                if (!updatedMaster[k].keypoints) updatedMaster[k].keypoints = {};
+            });
+            setMasterData(updatedMaster);
+        }
       }
     } catch (error: any) {
       console.error("Fetch failed:", error);
-      setErrorLoad(error.message || "Gagal terhubung ke database.");
+      if (showLoading) setErrorLoad(error.message || "Gagal terhubung ke database.");
     } finally {
       if (showLoading) setIsLoading(false);
     }
-  };
-
-  const startDemoMode = () => {
-    setIsDemoMode(true);
-    setErrorLoad(null);
-    localStorage.setItem('yandal_demo_mode', 'true');
-    const saved = localStorage.getItem('yandal_local_reports');
-    if (saved) setReports(JSON.parse(saved));
   };
 
   const handleInitialRoleSelect = (selectedRole: UserRole) => {
@@ -122,7 +135,7 @@ const App: React.FC = () => {
      if (view === 'CONFIG') {
         setView('LOGIN');
         setRole(null);
-     } else if (view === 'INPUT' || view === 'TABLE' || view === 'DASHBOARD' || view === 'REKAP' || view === 'SETTINGS' || view === 'ABOUT') {
+     } else {
         if (role === UserRole.ADMIN) {
            setView('DASHBOARD');
         } else {
@@ -133,34 +146,33 @@ const App: React.FC = () => {
      setEditingReport(null);
   };
 
-  const handleSaveReport = async (data: ReportData) => {
+  const handleSaveReport = async (data: ReportData, isEditMode: boolean) => {
     setIsSyncing(true);
+    
+    pendingUpdatesRef.current.set(data.id, data.timestamp);
+    setReports(prev => {
+      const filtered = prev.filter(r => r.id !== data.id);
+      return [data, ...filtered];
+    });
+
     try {
       if (isDemoMode) {
-        let newReports;
-        if (editingReport) {
-          newReports = reports.map(r => r.id === data.id ? data : r);
-        } else {
-          newReports = [data, ...reports];
-        }
-        setReports(newReports);
-        localStorage.setItem('yandal_local_reports', JSON.stringify(newReports));
+        const currentReports = [data, ...reports.filter(r => r.id !== data.id)];
+        localStorage.setItem('yandal_local_reports', JSON.stringify(currentReports));
       } else {
-        await api.saveReport(data);
-        // Langsung update state lokal agar user melihat perubahan seketika
-        setReports(prev => {
-          const filtered = prev.filter(r => r.id !== data.id);
-          return [data, ...filtered];
-        });
+        await api.saveReport(data, isEditMode);
         
-        // Sinkronisasi ulang setelah jeda singkat untuk memastikan data spreadsheet benar
-        setTimeout(() => fetchData(false), 3000);
+        setTimeout(() => {
+          fetchData(false);
+          pendingUpdatesRef.current.delete(data.id);
+        }, 8000);
       }
-      alert(editingReport ? 'Laporan diperbarui!' : 'Laporan berhasil disimpan!');
+      
       setEditingReport(null);
       setView('TABLE');
     } catch (e) {
-      alert("Gagal menyimpan ke server.");
+      console.error("Save report failed:", e);
+      alert("Peringatan: Gagal sinkronisasi otomatis. Data Anda tersimpan di aplikasi, silakan cek koneksi atau refresh manual nanti.");
     } finally {
       setIsSyncing(false);
     }
@@ -171,19 +183,15 @@ const App: React.FC = () => {
     setView('INPUT');
   };
 
-  // Logika Filter dengan Deduplikasi (Menghindari Duplikat saat Edit)
   const filteredReportsForTable = useMemo(() => {
-    // 1. Deduplikasi berdasarkan ID (ambil yang paling baru berdasarkan timestamp)
-    const uniqueReportsMap = new Map<string, ReportData>();
-    reports.forEach(r => {
-      const existing = uniqueReportsMap.get(r.id);
-      if (!existing || new Date(r.timestamp) > new Date(existing.timestamp)) {
-        uniqueReportsMap.set(r.id, r);
-      }
-    });
-    const uniqueReportsList = Array.from(uniqueReportsMap.values());
+    const uniqueMap = new Map<string, ReportData>();
+    const sortedRaw = [...reports].sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
 
-    // 2. Terapkan filter UI
+    sortedRaw.forEach(r => uniqueMap.set(r.id, r));
+    const uniqueReportsList = Array.from(uniqueMap.values());
+
     return uniqueReportsList
       .filter(r => {
         const sessionMatch = !session.ulp || r.ulp === session.ulp;
@@ -232,32 +240,10 @@ const App: React.FC = () => {
     }
   };
 
-  const ensureExcelJS = (): Promise<any> => {
-    return new Promise((resolve, reject) => {
-      const existing = window.ExcelJS || (window as any).Excel;
-      if (existing) {
-        resolve(existing);
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
-      script.onload = () => resolve(window.ExcelJS || (window as any).Excel);
-      script.onerror = () => reject(new Error("Gagal memuat library ExcelJS"));
-      document.head.appendChild(script);
-    });
-  };
-
   const handleDownloadExcel = async () => {
-    let ExcelJS;
-    try {
-      ExcelJS = await ensureExcelJS();
-    } catch (err) {
-      alert("Library ExcelJS tidak dapat dimuat. Silahkan cek koneksi internet.");
-      return;
-    }
-
+    const ExcelJS = (window as any).ExcelJS;
     if (!ExcelJS) {
-      alert("Kesalahan kritis: Library ExcelJS tetap tidak ditemukan.");
+      alert("Library ExcelJS tidak tersedia.");
       return;
     }
 
@@ -305,12 +291,10 @@ const App: React.FC = () => {
 
       row.height = 110; 
       row.alignment = { vertical: 'middle', horizontal: 'center' };
-      row.commit(); 
 
       for (let s = 0; s < 6; s++) {
         const fotoSebelumUrl = r.photos?.sebelum?.[s];
         const fotoSesudahUrl = r.photos?.sesudah?.[s];
-
         const colSebelum = 10 + s * 2;
         const colSesudah = 11 + s * 2;
 
@@ -356,7 +340,6 @@ const App: React.FC = () => {
       const blob = new Blob([buffer], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
-
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -364,7 +347,7 @@ const App: React.FC = () => {
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      alert("Terjadi kesalahan saat mengolah file Excel.");
+      alert("Gagal mengolah file Excel.");
     } finally {
       setIsSyncing(false);
     }
@@ -379,65 +362,24 @@ const App: React.FC = () => {
     );
   }
 
-  if (errorLoad && !isDemoMode) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
-        <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-lg border border-red-100 animate-fade-in">
-          <div className="text-red-500 mb-6">
-            <svg className="w-16 h-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-black text-slate-800 mb-2 uppercase tracking-tight">Koneksi Bermasalah</h2>
-          <div className="bg-red-50 p-4 rounded-xl border border-red-100 mb-6 text-left">
-            <p className="text-red-700 text-xs font-bold leading-relaxed">{errorLoad}</p>
-          </div>
-          
-          <div className="space-y-3">
-            <button 
-              onClick={() => fetchData(true)}
-              className="w-full bg-primary text-white px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-cyan-800 transition-all shadow-lg shadow-cyan-100"
-            >
-              Coba Sinkron Ulang
-            </button>
-            <button 
-              onClick={startDemoMode}
-              className="w-full bg-slate-100 text-slate-700 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all border border-slate-200"
-            >
-              Gunakan Mode Demo (Offline)
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (view === 'LOGIN') {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
         <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-slate-200">
-          {isDemoMode && (
-            <div className="mb-4 bg-amber-50 text-amber-700 p-2 rounded-lg text-[10px] font-black text-center border border-amber-200 uppercase tracking-widest animate-pulse">
-              Aplikasi Berjalan dalam Mode Demo (Offline)
-            </div>
-          )}
           <div className="text-center mb-8">
             <img src={LOGO_URL} alt="Logo PLN" className="h-16 mx-auto mb-4 object-contain" />
             <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">PLN Electricity Services</h2>
             <h1 className="text-lg font-extrabold text-slate-800 mb-6 uppercase tracking-tight">Unit Layanan Bukittinggi</h1>
-            
             <div className="relative group mb-6">
               <img src={APP_LOGO} alt="Logo App" className="relative h-48 mx-auto object-contain transition-transform duration-500 hover:scale-110" />
             </div>
             <h2 className="text-2xl font-bold text-primary mb-1 leading-none">Aplikasi Monitoring</h2>
             <h2 className="text-2xl font-bold text-primary mb-2">Yandal Patrol</h2>
           </div>
-
           <div className="space-y-4">
             <button onClick={() => handleInitialRoleSelect(UserRole.USER)} className="w-full bg-primary hover:bg-cyan-800 text-white font-black py-4 px-6 rounded-2xl transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg shadow-cyan-100 uppercase text-xs tracking-widest">
               Login sebagai Petugas
             </button>
-
             {!showAdminLogin ? (
               <>
                 <button onClick={() => setShowAdminLogin(true)} className="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 px-6 rounded-2xl transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 uppercase text-xs tracking-widest">
@@ -465,10 +407,6 @@ const App: React.FC = () => {
                 </div>
               </form>
             )}
-            
-            <button onClick={() => setView('ABOUT')} className="w-full text-slate-400 hover:text-primary text-[10px] font-black py-2 transition-colors uppercase mt-4 tracking-widest">
-              Tentang Aplikasi
-            </button>
           </div>
         </div>
       </div>
@@ -502,7 +440,6 @@ const App: React.FC = () => {
                <button 
                  onClick={handleBackToMenu}
                  className="p-2 hover:bg-slate-100 rounded-full transition-all text-slate-600 group flex items-center gap-1"
-                 title="Kembali ke Menu Sebelumnya"
                >
                  <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -514,12 +451,11 @@ const App: React.FC = () => {
                  <img src={APP_LOGO} alt="App" className="h-8 object-contain" />
                  <div className="flex flex-col leading-none">
                    <span className="font-black text-sm text-slate-800 tracking-tight">Yandal Patrol</span>
-                   <span className="text-[9px] text-primary font-black uppercase">{session.ulp || 'Unit Bukittinggi'}</span>
+                   <span className="text-[9px] text-primary font-black uppercase tracking-widest">{session.ulp || 'UP3 BUKITTINGGI'}</span>
                  </div>
                </div>
             </div>
             <div className="flex items-center gap-4">
-               {isDemoMode && <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-tighter border border-amber-200">Mode Demo</span>}
                <button onClick={handleLogout} className="text-[10px] text-red-600 font-black px-4 py-2 rounded-xl hover:bg-red-50 transition-all uppercase tracking-widest">Logout</button>
             </div>
         </div>
@@ -543,7 +479,7 @@ const App: React.FC = () => {
       </header>
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-8">
-        {view === 'DASHBOARD' && <Dashboard reports={reports.filter(r => !session.ulp || r.ulp === session.ulp)} />}
+        {view === 'DASHBOARD' && <Dashboard reports={filteredReportsForTable.filter(r => !session.ulp || r.ulp === session.ulp)} />}
         {view === 'REKAP' && role === UserRole.ADMIN && <AdminRekap reports={reports} masterData={masterData} />}
         {view === 'SETTINGS' && role === UserRole.ADMIN && (
           <AdminSettings 
@@ -558,16 +494,31 @@ const App: React.FC = () => {
             }}
             onAddPenyulang={(ulp, names) => {
               const nd = {...masterData, [ulp]: {...masterData[ulp], penyulang: [...masterData[ulp].penyulang, ...names]}};
-              setMasterData(nd); if(!isDemoMode) api.updateMasterData(nd);
+              setMasterData(nd); if(!isDemoMode) api.updateMasterData(nd); 
             }}
             onDeletePenyulang={(ulp, n) => {
               const nd = {...masterData, [ulp]: {...masterData[ulp], penyulang: masterData[ulp].penyulang.filter(p => p !== n)}};
+              setMasterData(nd); if(!isDemoMode) api.updateMasterData(nd);
+            }}
+            onAddKeypoint={(ulp, penyulang, kps) => {
+              const nd = { ...masterData };
+              if (!nd[ulp].keypoints) nd[ulp].keypoints = {};
+              if (!nd[ulp].keypoints[penyulang]) nd[ulp].keypoints[penyulang] = [];
+              nd[ulp].keypoints[penyulang] = [...new Set([...nd[ulp].keypoints[penyulang], ...kps])];
+              setMasterData(nd); if(!isDemoMode) api.updateMasterData(nd);
+            }}
+            onDeleteKeypoint={(ulp, penyulang, kp) => {
+              const nd = { ...masterData };
+              if (nd[ulp].keypoints && nd[ulp].keypoints[penyulang]) {
+                 nd[ulp].keypoints[penyulang] = nd[ulp].keypoints[penyulang].filter(item => item !== kp);
+              }
               setMasterData(nd); if(!isDemoMode) api.updateMasterData(nd);
             }}
           />
         )}
         {view === 'INPUT' && role !== UserRole.GUEST && (
           <InputForm 
+            key={editingReport?.id || 'new-report'}
             onSubmit={handleSaveReport}
             onCancel={() => { setView('TABLE'); setEditingReport(null); }}
             masterData={masterData}
@@ -580,13 +531,15 @@ const App: React.FC = () => {
             <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
               <div>
                 <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">Riwayat Penugasan</h2>
-                {session.ulp && <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unit Layanan: <span className="text-primary">{session.ulp}</span></p>}
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Unit: <span className="text-primary">{session.ulp || 'GABUNGAN (UP3 BUKITTINGGI)'}</span>
+                </p>
               </div>
               <div className="flex gap-2">
                  <button 
                   onClick={() => fetchData(true)} 
                   className="bg-slate-200 text-slate-700 p-2.5 rounded-2xl hover:bg-slate-300 transition-all flex items-center justify-center group"
-                  title="Segarkan Data Secara Manual"
+                  title="Refresh Data Manual"
                  >
                     <svg className="w-5 h-5 group-active:rotate-180 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -607,7 +560,7 @@ const App: React.FC = () => {
                 <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Sampai Tanggal</label>
                 <input type="date" className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-primary/20" value={tableEndDate} onChange={(e) => setTableEndDate(e.target.value)} />
               </div>
-              {role === UserRole.ADMIN && (
+              {(role === UserRole.ADMIN || (role === UserRole.GUEST && !session.ulp)) && (
                 <div>
                   <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Filter ULP</label>
                   <select className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-xs font-bold bg-white outline-none focus:ring-2 focus:ring-primary/20" value={tableUlpFilter} onChange={(e) => setTableUlpFilter(e.target.value as ULPName)}>
@@ -625,9 +578,6 @@ const App: React.FC = () => {
                     onClick={handleDownloadExcel}
                     className="w-full py-2.5 px-4 bg-green-600 hover:bg-green-700 text-white font-black rounded-xl text-[10px] uppercase tracking-widest shadow-lg shadow-green-100 transition-all flex items-center justify-center gap-2 whitespace-nowrap"
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003 3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
                     Export Excel
                   </button>
                 )}
@@ -647,24 +597,17 @@ const App: React.FC = () => {
                     </div>
                   </div>
                   <h1 className="text-4xl font-black mb-1 tracking-tighter uppercase">Yandal Patrol Monitoring</h1>
-                  
                   <div className="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full mt-3 border border-white/30 flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-200 animate-pulse"></div>
                     <span className="text-[10px] font-black uppercase tracking-[0.3em]">Version {APP_VERSION}</span>
                   </div>
-
                   <p className="text-cyan-100 font-black text-[9px] uppercase tracking-[0.4em] opacity-60 mt-6">Digital Enforcement System</p>
                </div>
-               <div className="p-10 md:p-14 space-y-12">
+               <div className="p-10 md:p-14 space-y-12 text-center">
                   <section className="space-y-5">
-                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-3">
-                       <div className="w-2 h-8 bg-primary rounded-full"></div>
-                       Keterangan Aplikasi
-                    </h2>
+                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Keterangan Aplikasi</h2>
                     <p className="text-slate-500 leading-relaxed text-lg italic font-medium">"Aplikasi ini dikembangkan untuk memonitoring Pelaksanaan Pekerjaan Yandal Patrol guna memastikan keandalan sistem kelistrikan di wilayah PLN Electricity Services Bukittinggi."</p>
                   </section>
                   <div className="pt-10 border-t border-slate-100 flex flex-col items-center gap-2">
-                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.5em] mb-4">Official Platform</p>
                     <p className="text-base font-black text-slate-800 uppercase tracking-widest">PLN Electricity Services Bukittinggi</p>
                     <p className="text-[11px] text-slate-400 font-bold uppercase">© 2025 • IT Unit Layanan Bukittinggi</p>
                   </div>
