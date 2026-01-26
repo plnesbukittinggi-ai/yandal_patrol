@@ -8,6 +8,8 @@ interface AdminSettingsProps {
   onDeletePetugas: (ulp: ULPName, name: string) => void;
   onAddPenyulang: (ulp: ULPName, names: string[]) => void;
   onDeletePenyulang: (ulp: ULPName, name: string) => void;
+  onAddKeypoint: (ulp: ULPName, penyulang: string, keypoints: string[]) => void;
+  onDeleteKeypoint: (ulp: ULPName, penyulang: string, keypoint: string) => void;
   onInitDefault?: () => void;
 }
 
@@ -17,11 +19,16 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   onDeletePetugas, 
   onAddPenyulang,
   onDeletePenyulang,
+  onAddKeypoint,
+  onDeleteKeypoint,
   onInitDefault
 }) => {
   const [selectedUlp, setSelectedUlp] = useState<ULPName | ''>('');
   const [newPetugas, setNewPetugas] = useState('');
   const [newPenyulang, setNewPenyulang] = useState('');
+  
+  const [activePenyulangForKeypoints, setActivePenyulangForKeypoints] = useState('');
+  const [newKeypoint, setNewKeypoint] = useState('');
 
   const handleAddPetugasSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,182 +52,211 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
     }
   };
 
+  const handleAddKeypointSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedUlp && activePenyulangForKeypoints && newKeypoint.trim()) {
+      const names = newKeypoint.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+      if (names.length > 0) {
+        onAddKeypoint(selectedUlp, activePenyulangForKeypoints, names);
+        setNewKeypoint('');
+      }
+    }
+  };
+
   const currentData = selectedUlp ? masterData[selectedUlp] : null;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       
-      {/* Info Card */}
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600 mt-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <div>
-          <h3 className="font-bold text-blue-800">Petunjuk Pengisian Database</h3>
+          <h3 className="font-bold text-blue-800">Petunjuk Pengelolaan Database</h3>
           <p className="text-sm text-blue-700 mt-1">
-            Data yang Anda tambah atau hapus di sini akan <strong>otomatis tersimpan ke Google Spreadsheet</strong>. 
-            Anda tidak perlu mengedit file Excel/Spreadsheet secara manual.
-          </p>
-          <p className="text-sm text-blue-700 mt-1">
-             Gunakan fitur ini untuk menambah atau menghapus daftar Petugas dan Penyulang.
+            Gunakan panel ini untuk mengelola master data petugas, penyulang, dan keypoint. 
+            Data yang diubah akan disinkronkan ke server secara real-time.
           </p>
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-        <div className="flex justify-between items-center mb-6">
+      <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
-            <h2 className="text-xl font-bold text-slate-800">Kelola Data Master</h2>
-            <p className="text-slate-500">Edit daftar Petugas & Penyulang per ULP</p>
+            <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Data Master Sistem</h2>
+            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-1">Edit Konfigurasi Petugas & Infrastruktur</p>
           </div>
-          {onInitDefault && (
-             <button 
-              onClick={() => {
-                if(window.confirm("Ini akan menimpa data di Spreadsheet dengan Data Default Aplikasi. Lanjutkan?")) {
-                  onInitDefault();
-                }
+          <div className="w-full md:w-64">
+            <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Pilih Unit Layanan (ULP)</label>
+            <select
+              className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary/10 outline-none font-bold text-sm bg-slate-50 transition-all"
+              value={selectedUlp}
+              onChange={(e) => {
+                setSelectedUlp(e.target.value as ULPName);
+                setActivePenyulangForKeypoints('');
               }}
-              className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded border border-slate-300 transition-colors"
-             >
-               Inisialisasi Database ke Server
-             </button>
-          )}
-        </div>
-
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-slate-700 mb-1">Pilih ULP</label>
-          <select
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
-            value={selectedUlp}
-            onChange={(e) => setSelectedUlp(e.target.value as ULPName)}
-          >
-            <option value="">-- Pilih Unit Layanan Pelanggan --</option>
-            {Object.values(masterData).map((data: ULPData) => (
-              <option key={data.name} value={data.name}>
-                {data.name}
-              </option>
-            ))}
-          </select>
+            >
+              <option value="">-- Pilih ULP --</option>
+              {Object.values(masterData).map((data: ULPData) => (
+                <option key={data.name} value={data.name}>{data.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {!selectedUlp && (
-          <div className="text-center p-8 bg-slate-50 rounded-lg border border-dashed border-slate-300">
-            <p className="text-slate-400">Silahkan pilih ULP terlebih dahulu untuk melihat dan mengedit data.</p>
+          <div className="text-center p-20 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200">
+             <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-4 border border-slate-100">
+               <svg className="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+               </svg>
+             </div>
+             <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Silahkan Pilih Unit Dahulu</h3>
           </div>
         )}
 
         {selectedUlp && currentData && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-fade-in">
-            {/* Manage Petugas */}
-            <div className="space-y-4">
-              <div className="bg-cyan-50 p-4 rounded-lg border border-cyan-100">
-                <h3 className="font-semibold text-cyan-800 mb-2">Tambah Petugas</h3>
-                <form onSubmit={handleAddPetugasSubmit} className="flex flex-col gap-2">
-                  <textarea
-                    placeholder="Masukkan nama petugas baru...&#10;Bisa input banyak sekaligus (pisahkan dengan Enter atau Koma)"
-                    className="w-full px-3 py-2 border border-cyan-200 rounded text-sm focus:outline-none focus:border-cyan-500 min-h-[80px]"
+          <div className="space-y-12 animate-fade-in">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+              {/* Petugas */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center shadow-sm">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Daftar Petugas</h3>
+                </div>
+                
+                <form onSubmit={handleAddPetugasSubmit} className="flex gap-2">
+                  <input
+                    placeholder="Nama Petugas..."
+                    className="flex-1 px-4 py-3 border border-slate-200 rounded-xl text-xs font-bold focus:ring-4 focus:ring-primary/10 outline-none"
                     value={newPetugas}
                     onChange={(e) => setNewPetugas(e.target.value)}
                   />
-                  <button
-                    type="submit"
-                    disabled={!newPetugas.trim()}
-                    className="self-end bg-cyan-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                  >
-                    + Simpan ke Spreadsheet
-                  </button>
+                  <button type="submit" className="bg-primary text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-cyan-800 shadow-lg shadow-cyan-100 transition-all">+</button>
                 </form>
+
+                <div className="bg-slate-50 rounded-2xl border border-slate-100 max-h-60 overflow-y-auto no-scrollbar">
+                  <div className="divide-y divide-slate-200">
+                    {currentData.petugas.map((p, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-4 group hover:bg-white transition-all">
+                        <span className="text-xs font-bold text-slate-700 uppercase">{p}</span>
+                        <button onClick={() => onDeletePetugas(selectedUlp, p)} className="p-2 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <h4 className="text-sm font-bold text-slate-700 uppercase mb-2">Daftar Petugas ({currentData.petugas.length})</h4>
-                <div className="bg-white border border-slate-200 rounded-lg max-h-64 overflow-y-auto">
-                  <ul className="divide-y divide-slate-100">
-                    {currentData.petugas.length === 0 ? (
-                      <li className="px-4 py-3 text-sm text-slate-400 italic text-center">Belum ada data petugas</li>
-                    ) : (
-                      currentData.petugas.map((p, idx) => (
-                        <li key={`${p}-${idx}`} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 flex items-center justify-between group transition-colors">
-                          <div className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
-                            {p}
-                          </div>
-                          <button
-                            onClick={() => {
-                              if (window.confirm(`Hapus petugas "${p}"? Data di spreadsheet juga akan terhapus.`)) {
-                                onDeletePetugas(selectedUlp, p);
-                              }
-                            }}
-                            className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-all"
-                            title="Hapus Petugas"
-                            aria-label={`Hapus petugas ${p}`}
+              {/* Penyulang */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Daftar Penyulang</h3>
+                </div>
+
+                <form onSubmit={handleAddPenyulangSubmit} className="flex gap-2">
+                  <input
+                    placeholder="Kode Penyulang..."
+                    className="flex-1 px-4 py-3 border border-slate-200 rounded-xl text-xs font-bold focus:ring-4 focus:ring-primary/10 outline-none"
+                    value={newPenyulang}
+                    onChange={(e) => setNewPenyulang(e.target.value)}
+                  />
+                  <button type="submit" className="bg-amber-500 text-white px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-amber-600 shadow-lg shadow-amber-100 transition-all">+</button>
+                </form>
+
+                <div className="bg-slate-50 rounded-2xl border border-slate-100 max-h-60 overflow-y-auto no-scrollbar">
+                  <div className="divide-y divide-slate-200">
+                    {currentData.penyulang.map((p, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-4 group hover:bg-white transition-all">
+                        <span className="text-xs font-bold text-slate-700 uppercase">{p}</span>
+                        <div className="flex gap-1">
+                          <button 
+                            onClick={() => setActivePenyulangForKeypoints(p)}
+                            className={`p-2 rounded-lg transition-all ${activePenyulangForKeypoints === p ? 'bg-amber-100 text-amber-600' : 'text-slate-300 hover:text-amber-500 hover:bg-amber-50'}`}
+                            title="Edit Keypoints"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                          <button onClick={() => onDeletePenyulang(selectedUlp, p)} className="p-2 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                           </button>
-                        </li>
-                      ))
-                    )}
-                  </ul>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Manage Penyulang */}
-            <div className="space-y-4">
-              <div className="bg-amber-50 p-4 rounded-lg border border-amber-100">
-                <h3 className="font-semibold text-amber-800 mb-2">Tambah Penyulang</h3>
-                <form onSubmit={handleAddPenyulangSubmit} className="flex flex-col gap-2">
-                  <textarea
-                    placeholder="Masukkan nama penyulang baru...&#10;Bisa input banyak sekaligus (pisahkan dengan Enter atau Koma)"
-                    className="w-full px-3 py-2 border border-amber-200 rounded text-sm focus:outline-none focus:border-amber-500 min-h-[80px]"
-                    value={newPenyulang}
-                    onChange={(e) => setNewPenyulang(e.target.value)}
-                  />
-                  <button
-                    type="submit"
-                    disabled={!newPenyulang.trim()}
-                    className="self-end bg-amber-500 text-white px-4 py-2 rounded text-sm font-medium hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                  >
-                     + Simpan ke Spreadsheet
-                  </button>
-                </form>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-bold text-slate-700 uppercase mb-2">Daftar Penyulang ({currentData.penyulang.length})</h4>
-                <div className="bg-white border border-slate-200 rounded-lg max-h-64 overflow-y-auto">
-                  <ul className="divide-y divide-slate-100">
-                    {currentData.penyulang.length === 0 ? (
-                       <li className="px-4 py-3 text-sm text-slate-400 italic text-center">Belum ada data penyulang</li>
-                    ) : (
-                      currentData.penyulang.map((p, idx) => (
-                        <li key={`${p}-${idx}`} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 flex items-center justify-between group transition-colors">
-                          <div className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                            {p}
-                          </div>
-                          <button
-                            onClick={() => {
-                              if (window.confirm(`Hapus penyulang "${p}"? Data di spreadsheet juga akan terhapus.`)) {
-                                onDeletePenyulang(selectedUlp, p);
-                              }
-                            }}
-                            className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-all"
-                            title="Hapus Penyulang"
-                            aria-label={`Hapus penyulang ${p}`}
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            {/* Keypoints (Full Width) */}
+            <div className={`p-8 rounded-[2rem] border-2 transition-all ${activePenyulangForKeypoints ? 'bg-slate-50 border-slate-200' : 'bg-slate-50/50 border-dashed border-slate-200 opacity-60'}`}>
+               {!activePenyulangForKeypoints ? (
+                 <div className="text-center py-10">
+                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest italic">Pilih satu penyulang di atas untuk mengedit daftar Keypoint</p>
+                 </div>
+               ) : (
+                 <div className="space-y-6 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                       <div className="flex items-center gap-3">
+                         <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-primary shadow-sm border border-slate-100">
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
-                          </button>
-                        </li>
-                      ))
-                    )}
-                  </ul>
-                </div>
-              </div>
+                         </div>
+                         <div>
+                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Kelola Keypoint</h3>
+                            <p className="text-[10px] font-black text-primary uppercase tracking-widest">Penyulang: {activePenyulangForKeypoints}</p>
+                         </div>
+                       </div>
+                       <button onClick={() => setActivePenyulangForKeypoints('')} className="text-[10px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest">Tutup</button>
+                    </div>
+
+                    <form onSubmit={handleAddKeypointSubmit} className="flex gap-2">
+                       <input 
+                        placeholder="Nama Keypoint (Contoh: RECLOSER XX)..."
+                        className="flex-1 px-5 py-4 border border-slate-200 rounded-2xl text-xs font-bold focus:ring-4 focus:ring-primary/10 outline-none bg-white shadow-sm"
+                        value={newKeypoint}
+                        onChange={(e) => setNewKeypoint(e.target.value)}
+                       />
+                       <button type="submit" className="bg-primary text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-cyan-800 shadow-xl shadow-cyan-100">Tambah</button>
+                    </form>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                       {(currentData.keypoints?.[activePenyulangForKeypoints] || []).length > 0 ? (
+                         (currentData.keypoints?.[activePenyulangForKeypoints] || []).map((kp, idx) => (
+                           <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between group">
+                             <span className="text-[11px] font-bold text-slate-700 uppercase">{kp}</span>
+                             <button onClick={() => onDeleteKeypoint(selectedUlp, activePenyulangForKeypoints, kp)} className="text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
+                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                               </svg>
+                             </button>
+                           </div>
+                         ))
+                       ) : (
+                         <div className="col-span-full py-8 text-center text-slate-400 font-bold text-[10px] uppercase tracking-widest">Belum ada keypoint terdaftar untuk penyulang ini</div>
+                       )}
+                    </div>
+                 </div>
+               )}
             </div>
           </div>
         )}
