@@ -37,6 +37,7 @@ export interface ULPData {
   name: ULPName;
   petugas: string[];
   penyulang: string[];
+  keypoints: Record<string, string[]>; // Map: Penyulang Name -> Array of Keypoints
 }
 
 export interface LoginSession {
