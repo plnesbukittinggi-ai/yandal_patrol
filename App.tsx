@@ -21,6 +21,16 @@ declare global {
 }
 
 const App: React.FC = () => {
+  // Helper to get current month date range
+  const getCurrentMonthRange = () => {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+    return { firstDay, lastDay };
+  };
+
+  const { firstDay: initStart, lastDay: initEnd } = getCurrentMonthRange();
+
   const [role, setRole] = useState<UserRole | null>(null);
   const [view, setView] = useState<ViewState>('LOGIN');
   const [isLoading, setIsLoading] = useState(false);
@@ -35,8 +45,8 @@ const App: React.FC = () => {
 
   const [session, setSession] = useState<LoginSession>({ ulp: null, petugas1: null, petugas2: null });
 
-  const [tableStartDate, setTableStartDate] = useState('');
-  const [tableEndDate, setTableEndDate] = useState('');
+  const [tableStartDate, setTableStartDate] = useState(initStart);
+  const [tableEndDate, setTableEndDate] = useState(initEnd);
   const [tableUlpFilter, setTableUlpFilter] = useState<ULPName | ''>('');
 
   const [reports, setReports] = useState<ReportData[]>([]);
@@ -80,7 +90,6 @@ const App: React.FC = () => {
     if (Notification.permission === 'granted') {
       playNotificationSound();
       
-      // Gunakan Service Worker Registration (Lebih kuat untuk mobile/background)
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then(registration => {
           registration.showNotification(title, {
@@ -94,7 +103,6 @@ const App: React.FC = () => {
           } as any);
         });
       } else {
-        // Fallback
         new Notification(title, { body, icon: APP_LOGO });
       }
     }
@@ -506,7 +514,7 @@ const App: React.FC = () => {
                   {Object.values(ULPName).map(u => <option key={u} value={u}>{u}</option>)}
                 </select>
               )}
-              <button onClick={() => { setTableStartDate(''); setTableEndDate(''); setTableUlpFilter(''); }} className="w-full py-2.5 px-4 bg-slate-50 text-slate-400 font-black rounded-xl text-[10px] uppercase border transition-all">Reset</button>
+              <button onClick={() => { setTableStartDate(initStart); setTableEndDate(initEnd); setTableUlpFilter(''); }} className="w-full py-2.5 px-4 bg-slate-50 text-slate-400 font-black rounded-xl text-[10px] uppercase border transition-all">Reset</button>
               {role === UserRole.ADMIN && <button onClick={handleDownloadExcel} className="w-full py-2.5 px-4 bg-green-600 text-white font-black rounded-xl text-[10px] uppercase shadow-lg">Export Excel</button>}
             </div>
             <DataTable reports={filteredReportsForTable} onEdit={role !== UserRole.GUEST ? openEditForm : undefined} />
