@@ -242,74 +242,54 @@ const App: React.FC = () => {
   const handleDownloadExcel = async () => {
     const ExcelJS = (window as any).ExcelJS;
     if (!ExcelJS) {
-      alert("Library ExcelJS tidak tersedia.");
+      alert("Library ExcelJS tidak tersedia. Pastikan koneksi internet stabil atau muat ulang halaman.");
       return;
     }
 
     setIsSyncing(true);
 
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Laporan Patrol');
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Laporan Patrol');
 
-    // Pengaturan ukuran yang diminta
-    const PHOTO_COL_WIDTH = 18.28; // ~128px (lebar kolom unit ExcelJS)
-    const DATA_ROW_HEIGHT = 101.25; // ~135px (poin, 1px = 0.75pt)
+      // Konfigurasi Ukuran yang Diminta
+      // Lebar kolom foto ~128px (Unit ExcelJS: lebar karakter. 128px ~= 18.28 unit)
+      const PHOTO_COL_WIDTH = 18.28;
+      // Tinggi baris data ~135px (ExcelJS menggunakan Points: 1px = 0.75pt. 135px = 101.25 pt)
+      const DATA_ROW_HEIGHT = 101.25;
 
-    const columns: any[] = [
-      { header: 'No', key: 'no', width: 5 },
-      { header: 'Tanggal', key: 'tanggal', width: 15 },
-      { header: 'No. Penugasan', key: 'noPenugasan', width: 25 },
-      { header: 'ULP', key: 'ulp', width: 20 },
-      { header: 'Petugas 1', key: 'petugas1', width: 20 },
-      { header: 'Petugas 2', key: 'petugas2', width: 20 },
-      { header: 'Penyulang', key: 'penyulang', width: 15 },
-      { header: 'Keypoint', key: 'keypoint', width: 25 },
-      { header: 'Start', key: 'start', width: 25 },
-      { header: 'Finish', key: 'finish', width: 25 },
-    ];
+      const columns: any[] = [
+        { header: 'No', key: 'no', width: 8 },
+        { header: 'Tanggal', key: 'tanggal', width: 15 },
+        { header: 'No. Penugasan', key: 'noPenugasan', width: 25 },
+        { header: 'ULP', key: 'ulp', width: 20 },
+        { header: 'Petugas 1', key: 'petugas1', width: 20 },
+        { header: 'Petugas 2', key: 'petugas2', width: 20 },
+        { header: 'Penyulang', key: 'penyulang', width: 15 },
+        { header: 'Keypoint', key: 'keypoint', width: 25 },
+        { header: 'Start', key: 'start', width: 25 },
+        { header: 'Finish', key: 'finish', width: 25 },
+      ];
 
-    // Tambah 12 kolom foto dengan lebar 128px
-    for (let i = 1; i <= 6; i++) {
-      columns.push({ header: `Foto Sebelum ${i}`, key: `sebelum_${i}`, width: PHOTO_COL_WIDTH });
-      columns.push({ header: `Foto Sesudah ${i}`, key: `sesudah_${i}`, width: PHOTO_COL_WIDTH });
-    }
+      // Tambah kolom Foto (12 kolom)
+      for (let i = 1; i <= 6; i++) {
+        columns.push({ header: `Foto Sebelum ${i}`, key: `sebelum_${i}`, width: PHOTO_COL_WIDTH });
+        columns.push({ header: `Foto Sesudah ${i}`, key: `sesudah_${i}`, width: PHOTO_COL_WIDTH });
+      }
 
-    worksheet.columns = columns;
+      worksheet.columns = columns;
 
-    // Header styling dengan border
-    const headerRow = worksheet.getRow(1);
-    headerRow.font = { bold: true };
-    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-    headerRow.height = 30;
-    headerRow.eachCell({ includeEmpty: true }, (cell) => {
-      cell.border = {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'thin' },
-        right: { style: 'thin' }
-      };
-    });
-
-    for (const [index, r] of filteredReportsForTable.entries()) {
-      const row = worksheet.addRow({
-        no: index + 1,
-        tanggal: new Date(r.timestamp).toLocaleDateString('id-ID'),
-        noPenugasan: r.noPenugasan,
-        ulp: r.ulp,
-        petugas1: r.petugas1,
-        petugas2: r.petugas2,
-        penyulang: r.penyulang,
-        keypoint: r.keypoint,
-        start: r.titikStart,
-        finish: r.titikFinish,
-      });
-
-      // Set tinggi baris data 135px
-      row.height = DATA_ROW_HEIGHT; 
-      row.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-      
-      // Tambah border pada setiap sel data
-      row.eachCell({ includeEmpty: true }, (cell) => {
+      // Header Styling & Borders
+      const headerRow = worksheet.getRow(1);
+      headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      headerRow.height = 30;
+      headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+      headerRow.eachCell({ includeEmpty: true }, (cell) => {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF0E7490' } // cyan-700
+        };
         cell.border = {
           top: { style: 'thin' },
           left: { style: 'thin' },
@@ -318,51 +298,77 @@ const App: React.FC = () => {
         };
       });
 
-      // Memasukkan foto dengan ukuran pas sel (128x135px)
-      for (let s = 0; s < 6; s++) {
-        const fotoSebelumUrl = r.photos?.sebelum?.[s];
-        const fotoSesudahUrl = r.photos?.sesudah?.[s];
-        const colSebelum = 10 + s * 2;
-        const colSesudah = 11 + s * 2;
+      for (const [index, r] of filteredReportsForTable.entries()) {
+        const row = worksheet.addRow({
+          no: index + 1,
+          tanggal: new Date(r.timestamp).toLocaleDateString('id-ID'),
+          noPenugasan: r.noPenugasan,
+          ulp: r.ulp,
+          petugas1: r.petugas1,
+          petugas2: r.petugas2,
+          penyulang: r.penyulang,
+          keypoint: r.keypoint,
+          start: r.titikStart,
+          finish: r.titikFinish,
+        });
 
-        if (fotoSebelumUrl) {
-          try {
-            const base64 = await getBase64FromUrl(fotoSebelumUrl);
-            if (base64) {
-              const imgId = workbook.addImage({ 
-                base64, 
-                extension: base64.startsWith('data:image/png') ? 'png' : 'jpeg' 
-              });
-              worksheet.addImage(imgId, {
-                tl: { col: colSebelum, row: row.number - 1 },
-                ext: { width: 128, height: 135 } // Mengikuti dimensi yang ditentukan (px)
-              });
-            }
-          } catch (e) {}
-        }
+        row.height = DATA_ROW_HEIGHT;
+        row.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
 
-        if (fotoSesudahUrl) {
-          try {
-            const base64 = await getBase64FromUrl(fotoSesudahUrl);
-            if (base64) {
-              const imgId = workbook.addImage({ 
-                base64, 
-                extension: base64.startsWith('data:image/png') ? 'png' : 'jpeg' 
-              });
-              worksheet.addImage(imgId, {
-                tl: { col: colSesudah, row: row.number - 1 },
-                ext: { width: 128, height: 135 } // Mengikuti dimensi yang ditentukan (px)
-              });
-            }
-          } catch (e) {}
+        // Tambah Border ke seluruh sel data
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+        });
+
+        // Pengolahan Foto (128x135px)
+        for (let s = 0; s < 6; s++) {
+          const fotoSebelumUrl = r.photos?.sebelum?.[s];
+          const fotoSesudahUrl = r.photos?.sesudah?.[s];
+          const colSebelum = 10 + s * 2; // Index kolom 11 (K) dsb
+          const colSesudah = 11 + s * 2; // Index kolom 12 (L) dsb
+
+          if (fotoSebelumUrl) {
+            try {
+              const base64 = await getBase64FromUrl(fotoSebelumUrl);
+              if (base64) {
+                const imgId = workbook.addImage({ 
+                  base64, 
+                  extension: base64.startsWith('data:image/png') ? 'png' : 'jpeg' 
+                });
+                worksheet.addImage(imgId, {
+                  tl: { col: colSebelum, row: row.number - 1 },
+                  ext: { width: 128, height: 135 } // Dimensi pasti 128x135px
+                });
+              }
+            } catch (e) {}
+          }
+
+          if (fotoSesudahUrl) {
+            try {
+              const base64 = await getBase64FromUrl(fotoSesudahUrl);
+              if (base64) {
+                const imgId = workbook.addImage({ 
+                  base64, 
+                  extension: base64.startsWith('data:image/png') ? 'png' : 'jpeg' 
+                });
+                worksheet.addImage(imgId, {
+                  tl: { col: colSesudah, row: row.number - 1 },
+                  ext: { width: 128, height: 135 } // Dimensi pasti 128x135px
+                });
+              }
+            } catch (e) {}
+          }
         }
       }
-    }
 
-    const dateStr = new Date().toISOString().split('T')[0];
-    const filename = `Laporan_Patrol_${tableUlpFilter || 'Semua_ULP'}_${dateStr}.xlsx`;
+      const dateStr = new Date().toISOString().split('T')[0];
+      const filename = `Laporan_Patrol_${tableUlpFilter || 'Semua_ULP'}_${dateStr}.xlsx`;
 
-    try {
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -374,7 +380,8 @@ const App: React.FC = () => {
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      alert("Gagal mengolah file Excel.");
+      console.error(err);
+      alert("Terjadi kesalahan saat mengekspor data Excel.");
     } finally {
       setIsSyncing(false);
     }
