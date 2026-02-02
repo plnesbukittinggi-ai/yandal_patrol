@@ -251,6 +251,10 @@ const App: React.FC = () => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Laporan Patrol');
 
+    // Pengaturan ukuran yang diminta
+    const PHOTO_COL_WIDTH = 18.28; // ~128px (lebar kolom unit ExcelJS)
+    const DATA_ROW_HEIGHT = 101.25; // ~135px (poin, 1px = 0.75pt)
+
     const columns: any[] = [
       { header: 'No', key: 'no', width: 5 },
       { header: 'Tanggal', key: 'tanggal', width: 15 },
@@ -264,9 +268,7 @@ const App: React.FC = () => {
       { header: 'Finish', key: 'finish', width: 25 },
     ];
 
-    const PHOTO_COL_WIDTH = 18.28; // ~128px in ExcelJS units
-    const DATA_ROW_HEIGHT = 101.25; // 135px in points (1px = 0.75pt)
-
+    // Tambah 12 kolom foto dengan lebar 128px
     for (let i = 1; i <= 6; i++) {
       columns.push({ header: `Foto Sebelum ${i}`, key: `sebelum_${i}`, width: PHOTO_COL_WIDTH });
       columns.push({ header: `Foto Sesudah ${i}`, key: `sesudah_${i}`, width: PHOTO_COL_WIDTH });
@@ -274,6 +276,7 @@ const App: React.FC = () => {
 
     worksheet.columns = columns;
 
+    // Header styling dengan border
     const headerRow = worksheet.getRow(1);
     headerRow.font = { bold: true };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -301,9 +304,11 @@ const App: React.FC = () => {
         finish: r.titikFinish,
       });
 
+      // Set tinggi baris data 135px
       row.height = DATA_ROW_HEIGHT; 
       row.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
       
+      // Tambah border pada setiap sel data
       row.eachCell({ includeEmpty: true }, (cell) => {
         cell.border = {
           top: { style: 'thin' },
@@ -313,6 +318,7 @@ const App: React.FC = () => {
         };
       });
 
+      // Memasukkan foto dengan ukuran pas sel (128x135px)
       for (let s = 0; s < 6; s++) {
         const fotoSebelumUrl = r.photos?.sebelum?.[s];
         const fotoSesudahUrl = r.photos?.sesudah?.[s];
@@ -329,7 +335,7 @@ const App: React.FC = () => {
               });
               worksheet.addImage(imgId, {
                 tl: { col: colSebelum, row: row.number - 1 },
-                ext: { width: 128, height: 135 }
+                ext: { width: 128, height: 135 } // Mengikuti dimensi yang ditentukan (px)
               });
             }
           } catch (e) {}
@@ -345,7 +351,7 @@ const App: React.FC = () => {
               });
               worksheet.addImage(imgId, {
                 tl: { col: colSesudah, row: row.number - 1 },
-                ext: { width: 128, height: 135 }
+                ext: { width: 128, height: 135 } // Mengikuti dimensi yang ditentukan (px)
               });
             }
           } catch (e) {}
