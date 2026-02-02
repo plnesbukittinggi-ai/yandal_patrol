@@ -74,15 +74,29 @@ const App: React.FC = () => {
   const sendBrowserNotification = (title: string, body: string) => {
     if ('Notification' in window && Notification.permission === 'granted') {
       playNotificationSound();
-      // Fix: Cast the options object to any to resolve TypeScript error regarding 'renotify' and 'badge' properties.
-      // These properties are valid in modern browsers but may be missing from the environment's NotificationOptions definition.
-      new Notification(title, {
-        body,
-        icon: APP_LOGO,
-        badge: APP_LOGO,
-        tag: 'yandal-patrol-notif',
-        renotify: true
-      } as any);
+      
+      // Jika Service Worker tersedia, gunakan registration.showNotification (lebih stabil untuk background)
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(registration => {
+          registration.showNotification(title, {
+            body,
+            icon: APP_LOGO,
+            badge: APP_LOGO,
+            tag: 'yandal-patrol-notif',
+            renotify: true,
+            vibrate: [200, 100, 200]
+          } as any);
+        });
+      } else {
+        // Fallback ke notifikasi standar
+        new Notification(title, {
+          body,
+          icon: APP_LOGO,
+          badge: APP_LOGO,
+          tag: 'yandal-patrol-notif',
+          renotify: true
+        } as any);
+      }
     }
   };
 
@@ -115,9 +129,7 @@ const App: React.FC = () => {
     const now = new Date();
     const currentHour = now.getHours();
     
-    // Antara jam 10:00 sampai 18:00
     if (currentHour >= 10 && currentHour <= 18) {
-      // Muncul setiap jam genap (10, 12, 14, 16, 18) jika belum dikirim di jam tersebut
       if (currentHour % 2 === 0 && lastPeriodicNotifyRef.current !== currentHour) {
         lastPeriodicNotifyRef.current = currentHour;
         const { message, totalToday } = generateSummaryMessage(currentReports);
@@ -140,7 +152,6 @@ const App: React.FC = () => {
     }
     fetchData(true);
 
-    // Polling background setiap 2 menit untuk data baru & notifikasi berkala
     const poller = setInterval(() => {
       fetchData(false);
     }, 120000);
@@ -166,13 +177,11 @@ const App: React.FC = () => {
       if (data && data.reports) {
         const serverReports = data.reports as ReportData[];
         
-        // Logika Notifikasi Input Baru
         if (serverReports.length > 0) {
           const sorted = [...serverReports].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
           const latest = sorted[0];
           
           if (lastReportIdRef.current && latest.id !== lastReportIdRef.current) {
-            // Ada inputan baru masuk
             const { message, totalToday } = generateSummaryMessage(serverReports);
             sendBrowserNotification("Input Laporan Patrol Baru!", `Oleh: ${latest.petugas1} (${latest.ulp})\n\n${message}`);
             updateAppBadge(totalToday);
@@ -180,7 +189,6 @@ const App: React.FC = () => {
           lastReportIdRef.current = latest.id;
         }
 
-        // Cek notifikasi berkala 2 jam
         checkPeriodicNotification(serverReports);
 
         setReports(prevReports => {
