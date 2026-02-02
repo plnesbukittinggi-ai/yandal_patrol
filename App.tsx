@@ -12,6 +12,7 @@ import { api } from './services/api';
 
 const LOGO_URL = "https://plnes.co.id/_next/image?url=https%3A%2F%2Fcms.plnes.co.id%2Fuploads%2FLogo_HP_New_Temporary_09a9c5a521.png&w=750&q=75"; 
 const APP_LOGO = "https://raw.githubusercontent.com/plnesbukittinggi-ai/yandal_patrol/main/ChatGPT%20Image%2018%20Des%202025%2C%2011.11.52.png";
+const NOTIFICATION_SOUND = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3";
 
 declare global {
   interface Window {
@@ -42,8 +43,57 @@ const App: React.FC = () => {
   const [editingReport, setEditingReport] = useState<ReportData | null>(null);
 
   const pendingUpdatesRef = useRef<Map<string, string>>(new Map());
+  const lastReportIdRef = useRef<string | null>(null);
+  const lastPeriodicNotifyRef = useRef<number>(0);
+
+  // Notification Utilities
+  const requestNotificationPermission = () => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  };
+
+  const playNotificationSound = () => {
+    const audio = new Audio(NOTIFICATION_SOUND);
+    audio.play().catch(e => console.log("Audio play blocked"));
+  };
+
+  const sendBrowserNotification = (title: string, body: string) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      playNotificationSound();
+      new Notification(title, {
+        body,
+        icon: APP_LOGO,
+        badge: APP_LOGO,
+        tag: 'yandal-patrol-notification'
+      });
+    }
+  };
+
+  const generateSummaryMessage = (currentReports: ReportData[]) => {
+    const today = new Date().toISOString().split('T')[0];
+    const todayReports = currentReports.filter(r => r.timestamp.startsWith(today));
+    
+    const counts: Record<string, number> = {};
+    Object.values(ULPName).forEach(name => {
+      counts[name] = todayReports.filter(r => r.ulp === name).length;
+    });
+
+    const dateOptions: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const dateStr = new Date().toLocaleDateString('id-ID', dateOptions);
+
+    let message = `Laporan Yandal Patrol Hari ini : ${dateStr}\n`;
+    Object.values(ULPName).forEach(name => {
+      const label = name.padEnd(20, ' ');
+      message += `- ${label} : ${counts[name]} Laporan\n`;
+    });
+    message += `\nMohon untuk ULP yang belum melakukan Yandal Patrol untuk segera melaksanakannya.`;
+    return message;
+  };
 
   useEffect(() => {
+    requestNotificationPermission();
+    
     const savedDemo = localStorage.getItem('yandal_demo_mode');
     if (savedDemo === 'true') {
       setIsDemoMode(true);
@@ -51,7 +101,30 @@ const App: React.FC = () => {
       if (savedReports) setReports(JSON.parse(savedReports));
     }
     fetchData(true);
+
+    // Background poller for notifications and fresh data (every 2 minutes)
+    const poller = setInterval(() => {
+      fetchData(false);
+      checkPeriodicNotification();
+    }, 120000);
+
+    return () => clearInterval(poller);
   }, []);
+
+  const checkPeriodicNotification = () => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    // Check if time is between 10:00 and 18:00
+    if (currentHour >= 10 && currentHour <= 18) {
+      // Trigger every 2 hours (10, 12, 14, 16, 18)
+      if (currentHour % 2 === 0 && lastPeriodicNotifyRef.current !== currentHour) {
+        lastPeriodicNotifyRef.current = currentHour;
+        const msg = generateSummaryMessage(reports);
+        sendBrowserNotification("Yandal Patrol Periodic Update", msg);
+      }
+    }
+  };
 
   useEffect(() => {
     if (view === 'TABLE' && !isDemoMode) {
@@ -69,11 +142,25 @@ const App: React.FC = () => {
     try {
       const data = await api.getAllData();
       if (data && data.reports) {
+        const serverReports = data.reports as ReportData[];
+        
+        // Notification logic for new inputs
+        if (serverReports.length > 0) {
+          const latest = serverReports.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+          
+          if (lastReportIdRef.current && latest.id !== lastReportIdRef.current) {
+            // New report detected
+            const msg = `Inputan baru dari ${latest.ulp} oleh ${latest.petugas1}.\n\n` + generateSummaryMessage(serverReports);
+            sendBrowserNotification("Yandal Patrol: Laporan Baru!", msg);
+          }
+          lastReportIdRef.current = latest.id;
+        }
+
         setReports(prevReports => {
           const reportMap = new Map<string, ReportData>();
           prevReports.forEach(r => reportMap.set(r.id, r));
           
-          data.reports.forEach((serverReport: ReportData) => {
+          serverReports.forEach((serverReport: ReportData) => {
             const pendingTimestamp = pendingUpdatesRef.current.get(serverReport.id);
             if (pendingTimestamp && new Date(serverReport.timestamp) < new Date(pendingTimestamp)) {
               return; 
@@ -161,6 +248,7 @@ const App: React.FC = () => {
       } else {
         await api.saveReport(data, isEditMode);
         
+        // Small delay to let GAS process then fetch fresh
         setTimeout(() => {
           fetchData(false);
           pendingUpdatesRef.current.delete(data.id);
@@ -252,10 +340,7 @@ const App: React.FC = () => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Laporan Patrol');
 
-      // Konfigurasi Ukuran yang Diminta
-      // Lebar kolom foto ~128px (Unit ExcelJS: lebar karakter. 128px ~= 18.28 unit)
       const PHOTO_COL_WIDTH = 18.28;
-      // Tinggi baris data ~135px (ExcelJS menggunakan Points: 1px = 0.75pt. 135px = 101.25 pt)
       const DATA_ROW_HEIGHT = 101.25;
 
       const columns: any[] = [
@@ -271,7 +356,6 @@ const App: React.FC = () => {
         { header: 'Finish', key: 'finish', width: 25 },
       ];
 
-      // Tambah kolom Foto (12 kolom)
       for (let i = 1; i <= 6; i++) {
         columns.push({ header: `Foto Sebelum ${i}`, key: `sebelum_${i}`, width: PHOTO_COL_WIDTH });
         columns.push({ header: `Foto Sesudah ${i}`, key: `sesudah_${i}`, width: PHOTO_COL_WIDTH });
@@ -279,7 +363,6 @@ const App: React.FC = () => {
 
       worksheet.columns = columns;
 
-      // Header Styling & Borders
       const headerRow = worksheet.getRow(1);
       headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
       headerRow.height = 30;
@@ -288,7 +371,7 @@ const App: React.FC = () => {
         cell.fill = {
           type: 'pattern',
           pattern: 'solid',
-          fgColor: { argb: 'FF0E7490' } // cyan-700
+          fgColor: { argb: 'FF0E7490' }
         };
         cell.border = {
           top: { style: 'thin' },
@@ -315,7 +398,6 @@ const App: React.FC = () => {
         row.height = DATA_ROW_HEIGHT;
         row.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
 
-        // Tambah Border ke seluruh sel data
         row.eachCell({ includeEmpty: true }, (cell) => {
           cell.border = {
             top: { style: 'thin' },
@@ -325,12 +407,11 @@ const App: React.FC = () => {
           };
         });
 
-        // Pengolahan Foto (128x135px)
         for (let s = 0; s < 6; s++) {
           const fotoSebelumUrl = r.photos?.sebelum?.[s];
           const fotoSesudahUrl = r.photos?.sesudah?.[s];
-          const colSebelum = 10 + s * 2; // Index kolom 11 (K) dsb
-          const colSesudah = 11 + s * 2; // Index kolom 12 (L) dsb
+          const colSebelum = 10 + s * 2;
+          const colSesudah = 11 + s * 2;
 
           if (fotoSebelumUrl) {
             try {
@@ -342,7 +423,7 @@ const App: React.FC = () => {
                 });
                 worksheet.addImage(imgId, {
                   tl: { col: colSebelum, row: row.number - 1 },
-                  ext: { width: 128, height: 135 } // Dimensi pasti 128x135px
+                  ext: { width: 128, height: 135 }
                 });
               }
             } catch (e) {}
@@ -358,7 +439,7 @@ const App: React.FC = () => {
                 });
                 worksheet.addImage(imgId, {
                   tl: { col: colSesudah, row: row.number - 1 },
-                  ext: { width: 128, height: 135 } // Dimensi pasti 128x135px
+                  ext: { width: 128, height: 135 }
                 });
               }
             } catch (e) {}
