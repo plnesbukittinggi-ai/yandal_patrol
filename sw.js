@@ -12,27 +12,38 @@ self.addEventListener('activate', (event) => {
 // Menangani klik pada notifikasi
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const urlToOpen = event.notification.data?.url || '/';
+  
   event.waitUntil(
-    clients.matchAll({ type: 'window' }).then((clientList) => {
-      if (clientList.length > 0) {
-        return clientList[0].focus();
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // Jika tab sudah terbuka, fokuskan
+      for (var i = 0; i < windowClients.length; i++) {
+        var client = windowClients[i];
+        if (client.url === urlToOpen && 'focus' in client) {
+          return client.focus();
+        }
       }
-      return clients.openWindow('/');
+      // Jika tidak, buka tab baru
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
     })
   );
 });
 
-// Listener untuk pesan dari App utama jika ingin memicu notifikasi via SW
+// Listener untuk pesan dari App utama
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     const { title, body } = event.data.payload;
-    self.registration.showNotification(title, {
+    const options = {
       body,
       icon: APP_LOGO,
       badge: APP_LOGO,
       tag: 'yandal-patrol-notif',
       renotify: true,
-      vibrate: [200, 100, 200]
-    });
+      vibrate: [200, 100, 200],
+      data: { url: self.registration.scope }
+    };
+    self.registration.showNotification(title, options);
   }
 });
