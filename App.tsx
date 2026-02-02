@@ -46,27 +46,43 @@ const App: React.FC = () => {
   const lastReportIdRef = useRef<string | null>(null);
   const lastPeriodicNotifyRef = useRef<number>(0);
 
-  // Notification Utilities
+  // --- NOTIFICATION FEATURE ---
+
   const requestNotificationPermission = () => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
+    if ('Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
     }
   };
 
   const playNotificationSound = () => {
     const audio = new Audio(NOTIFICATION_SOUND);
-    audio.play().catch(e => console.log("Audio play blocked"));
+    audio.play().catch(e => console.log("Audio play blocked by browser policy"));
+  };
+
+  const updateAppBadge = (count: number) => {
+    if ('setAppBadge' in navigator) {
+      if (count > 0) {
+        (navigator as any).setAppBadge(count).catch(() => {});
+      } else {
+        (navigator as any).clearAppBadge().catch(() => {});
+      }
+    }
   };
 
   const sendBrowserNotification = (title: string, body: string) => {
     if ('Notification' in window && Notification.permission === 'granted') {
       playNotificationSound();
+      // Fix: Cast the options object to any to resolve TypeScript error regarding 'renotify' and 'badge' properties.
+      // These properties are valid in modern browsers but may be missing from the environment's NotificationOptions definition.
       new Notification(title, {
         body,
         icon: APP_LOGO,
         badge: APP_LOGO,
-        tag: 'yandal-patrol-notification'
-      });
+        tag: 'yandal-patrol-notif',
+        renotify: true
+      } as any);
     }
   };
 
@@ -79,17 +95,39 @@ const App: React.FC = () => {
       counts[name] = todayReports.filter(r => r.ulp === name).length;
     });
 
-    const dateOptions: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const dateOptions: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
     const dateStr = new Date().toLocaleDateString('id-ID', dateOptions);
 
     let message = `Laporan Yandal Patrol Hari ini : ${dateStr}\n`;
-    Object.values(ULPName).forEach(name => {
-      const label = name.padEnd(20, ' ');
-      message += `- ${label} : ${counts[name]} Laporan\n`;
-    });
+    message += `- ULP Bukittinggi          : ${counts[ULPName.BUKITTINGGI] || 0}\n`;
+    message += `- ULP Padang Panjang : ${counts[ULPName.PADANG_PANJANG] || 0}\n`;
+    message += `- ULP Lubuk Sikaping  : ${counts[ULPName.LUBUK_SIKAPING] || 0}\n`;
+    message += `- ULP Lubuk Basung    : ${counts[ULPName.LUBUK_BASUNG] || 0}\n`;
+    message += `- ULP Simpang Empat  : ${counts[ULPName.SIMPANG_EMPAT] || 0}\n`;
+    message += `- ULP Baso                    : ${counts[ULPName.BASO] || 0}\n`;
+    message += `- ULP Koto Tuo              : ${counts[ULPName.KOTO_TUO] || 0}\n`;
     message += `\nMohon untuk ULP yang belum melakukan Yandal Patrol untuk segera melaksanakannya.`;
-    return message;
+    
+    return { message, totalToday: todayReports.length };
   };
+
+  const checkPeriodicNotification = (currentReports: ReportData[]) => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    // Antara jam 10:00 sampai 18:00
+    if (currentHour >= 10 && currentHour <= 18) {
+      // Muncul setiap jam genap (10, 12, 14, 16, 18) jika belum dikirim di jam tersebut
+      if (currentHour % 2 === 0 && lastPeriodicNotifyRef.current !== currentHour) {
+        lastPeriodicNotifyRef.current = currentHour;
+        const { message, totalToday } = generateSummaryMessage(currentReports);
+        sendBrowserNotification("Update Berkala Yandal Patrol", message);
+        updateAppBadge(totalToday);
+      }
+    }
+  };
+
+  // --- END NOTIFICATION FEATURE ---
 
   useEffect(() => {
     requestNotificationPermission();
@@ -102,29 +140,13 @@ const App: React.FC = () => {
     }
     fetchData(true);
 
-    // Background poller for notifications and fresh data (every 2 minutes)
+    // Polling background setiap 2 menit untuk data baru & notifikasi berkala
     const poller = setInterval(() => {
       fetchData(false);
-      checkPeriodicNotification();
     }, 120000);
 
     return () => clearInterval(poller);
   }, []);
-
-  const checkPeriodicNotification = () => {
-    const now = new Date();
-    const currentHour = now.getHours();
-    
-    // Check if time is between 10:00 and 18:00
-    if (currentHour >= 10 && currentHour <= 18) {
-      // Trigger every 2 hours (10, 12, 14, 16, 18)
-      if (currentHour % 2 === 0 && lastPeriodicNotifyRef.current !== currentHour) {
-        lastPeriodicNotifyRef.current = currentHour;
-        const msg = generateSummaryMessage(reports);
-        sendBrowserNotification("Yandal Patrol Periodic Update", msg);
-      }
-    }
-  };
 
   useEffect(() => {
     if (view === 'TABLE' && !isDemoMode) {
@@ -144,17 +166,22 @@ const App: React.FC = () => {
       if (data && data.reports) {
         const serverReports = data.reports as ReportData[];
         
-        // Notification logic for new inputs
+        // Logika Notifikasi Input Baru
         if (serverReports.length > 0) {
-          const latest = serverReports.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+          const sorted = [...serverReports].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+          const latest = sorted[0];
           
           if (lastReportIdRef.current && latest.id !== lastReportIdRef.current) {
-            // New report detected
-            const msg = `Inputan baru dari ${latest.ulp} oleh ${latest.petugas1}.\n\n` + generateSummaryMessage(serverReports);
-            sendBrowserNotification("Yandal Patrol: Laporan Baru!", msg);
+            // Ada inputan baru masuk
+            const { message, totalToday } = generateSummaryMessage(serverReports);
+            sendBrowserNotification("Input Laporan Patrol Baru!", `Oleh: ${latest.petugas1} (${latest.ulp})\n\n${message}`);
+            updateAppBadge(totalToday);
           }
           lastReportIdRef.current = latest.id;
         }
+
+        // Cek notifikasi berkala 2 jam
+        checkPeriodicNotification(serverReports);
 
         setReports(prevReports => {
           const reportMap = new Map<string, ReportData>();
@@ -215,6 +242,7 @@ const App: React.FC = () => {
     setShowAdminLogin(false);
     setSession({ ulp: null, petugas1: null, petugas2: null });
     setEditingReport(null);
+    updateAppBadge(0);
   };
 
   const handleBackToMenu = () => {
@@ -248,7 +276,6 @@ const App: React.FC = () => {
       } else {
         await api.saveReport(data, isEditMode);
         
-        // Small delay to let GAS process then fetch fresh
         setTimeout(() => {
           fetchData(false);
           pendingUpdatesRef.current.delete(data.id);
