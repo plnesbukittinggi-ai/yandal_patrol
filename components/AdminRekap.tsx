@@ -8,8 +8,18 @@ interface AdminRekapProps {
 }
 
 export const AdminRekap: React.FC<AdminRekapProps> = ({ reports, masterData }) => {
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  // Helper to get current month date range
+  const getCurrentMonthRange = () => {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+    return { firstDay, lastDay };
+  };
+
+  const { firstDay: initStart, lastDay: initEnd } = getCurrentMonthRange();
+
+  const [startDate, setStartDate] = useState(initStart);
+  const [endDate, setEndDate] = useState(initEnd);
   const [filterUlp, setFilterUlp] = useState<ULPName | ''>('');
 
   const rekapData = useMemo(() => {
@@ -24,26 +34,20 @@ export const AdminRekap: React.FC<AdminRekapProps> = ({ reports, masterData }) =
     const rawResult: any[] = [];
 
     // 2. Iterasi melalui semua ULP di masterData
-    Object.values(masterData).forEach(ulpData => {
-      // Filter ULP jika ada input filter
+    Object.values(masterData).forEach((ulpData: ULPData) => {
       if (filterUlp && ulpData.name !== filterUlp) return;
 
-      // 3. Iterasi setiap petugas di ULP tersebut
       ulpData.petugas.forEach(namaPetugas => {
-        // Hitung realisasi (berapa kali petugas ini muncul di laporan yang sudah difilter tanggal)
         const totalRealisasi = filteredReports.filter(r => 
           r.ulp === ulpData.name && 
           (r.petugas1 === namaPetugas || r.petugas2 === namaPetugas)
         ).length;
 
-        // Tentukan label bulan (berdasarkan filter atau default)
-        let bulanLabel = "Semua";
+        let bulanLabel = "Bulan Ini";
         if (startDate && endDate) {
           const s = new Date(startDate).toLocaleString('id-ID', { month: 'short', year: '2-digit' });
           const e = new Date(endDate).toLocaleString('id-ID', { month: 'short', year: '2-digit' });
           bulanLabel = s === e ? s : `${s} - ${e}`;
-        } else if (startDate) {
-          bulanLabel = `Sejak ${new Date(startDate).toLocaleString('id-ID', { month: 'short' })}`;
         }
 
         rawResult.push({
@@ -55,8 +59,6 @@ export const AdminRekap: React.FC<AdminRekapProps> = ({ reports, masterData }) =
       });
     });
 
-    // 4. Sortir berdasarkan Total Realisasi terbesar (descending)
-    // Jika total sama, sortir berdasarkan nama (ascending)
     rawResult.sort((a, b) => {
       if (b.total !== a.total) {
         return b.total - a.total;
@@ -64,7 +66,6 @@ export const AdminRekap: React.FC<AdminRekapProps> = ({ reports, masterData }) =
       return a.nama.localeCompare(b.nama);
     });
 
-    // 5. Tambahkan nomor urut setelah disortir
     return rawResult.map((item, index) => ({
       ...item,
       no: index + 1
@@ -75,7 +76,7 @@ export const AdminRekap: React.FC<AdminRekapProps> = ({ reports, masterData }) =
     <div className="space-y-6 animate-fade-in">
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-          <h2 className="text-xl font-bold text-slate-800">Rekap Realisasi Petugas</h2>
+          <h2 className="text-xl font-bold text-slate-800">Rekap Realisasi Petugas (Bulan Berjalan)</h2>
           <div className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-bold border border-blue-100">
             Urutan: Realisasi Terbanyak
           </div>
@@ -114,10 +115,10 @@ export const AdminRekap: React.FC<AdminRekapProps> = ({ reports, masterData }) =
           </div>
           <div className="flex items-end">
             <button 
-              onClick={() => { setStartDate(''); setEndDate(''); setFilterUlp(''); }}
+              onClick={() => { setStartDate(initStart); setEndDate(initEnd); setFilterUlp(''); }}
               className="w-full py-2 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-md text-sm transition-colors"
             >
-              Reset Filter
+              Reset (Bulan Ini)
             </button>
           </div>
         </div>
@@ -158,7 +159,7 @@ export const AdminRekap: React.FC<AdminRekapProps> = ({ reports, masterData }) =
               ) : (
                 <tr>
                   <td colSpan={5} className="px-6 py-10 text-center text-slate-400 italic">
-                    Data tidak ditemukan untuk filter ini.
+                    Data tidak ditemukan untuk bulan ini.
                   </td>
                 </tr>
               )}
@@ -166,7 +167,7 @@ export const AdminRekap: React.FC<AdminRekapProps> = ({ reports, masterData }) =
           </table>
         </div>
         <div className="mt-4 text-[10px] text-slate-400 italic">
-          * Data diurutkan berdasarkan realisasi terbanyak. Menampilkan seluruh petugas yang terdaftar di Master Data.
+          * Menampilkan data petugas berdasarkan realisasi pada bulan berjalan ({initStart} s/d {initEnd}).
         </div>
       </div>
     </div>
