@@ -7,8 +7,18 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ reports }) => {
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  // Helper to get current month date range
+  const getCurrentMonthRange = () => {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+    return { firstDay, lastDay };
+  };
+
+  const { firstDay: initStart, lastDay: initEnd } = getCurrentMonthRange();
+
+  const [startDate, setStartDate] = useState(initStart);
+  const [endDate, setEndDate] = useState(initEnd);
 
   // 1. Filter laporan berdasarkan tanggal
   const filteredReports = useMemo(() => {
@@ -52,7 +62,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ reports }) => {
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">Dashboard Monitoring</h2>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Realisasi Yandal Patrol • PLN Electricity Services Unit Layanan Bukittinggi</p>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Realisasi Yandal Patrol • Unit Pelaksana Pelayanan Pelanggan</p>
         </div>
         
         <div className="flex flex-wrap items-end gap-3">
@@ -75,10 +85,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ reports }) => {
             />
           </div>
           <button 
-            onClick={() => { setStartDate(''); setEndDate(''); }}
+            onClick={() => { setStartDate(initStart); setEndDate(initEnd); }}
             className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-500 font-black rounded-xl text-[10px] uppercase tracking-widest transition-all"
           >
-            Reset
+            Reset (Bulan Ini)
           </button>
         </div>
       </div>
@@ -103,7 +113,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ reports }) => {
              </div>
              <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center">
                 <p className="text-[10px] font-black text-cyan-100 uppercase mb-1">Periode</p>
-                <p className="text-sm font-bold">{startDate && endDate ? 'Filter Aktif' : 'Semua Waktu'}</p>
+                <p className="text-sm font-bold">Bulan Berjalan</p>
              </div>
           </div>
         </div>
@@ -131,7 +141,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ reports }) => {
         <div className="p-8 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Realisasi Per Penyulang</h3>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Daftar peringkat realisasi terbanyak</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Daftar peringkat realisasi terbanyak (Bulan Ini)</p>
           </div>
           <div className="px-4 py-1.5 bg-amber-50 text-amber-600 rounded-full border border-amber-100 text-[10px] font-black uppercase tracking-widest">
             {statsPerPenyulang.length} Penyulang Aktif
@@ -184,7 +194,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ reports }) => {
                       <svg className="w-12 h-12 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                       </svg>
-                      <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest">Tidak ada data untuk periode ini</p>
+                      <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest">Tidak ada data untuk bulan ini</p>
                     </div>
                   </td>
                 </tr>
@@ -193,13 +203,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ reports }) => {
           </table>
         </div>
         
-        {statsPerPenyulang.length > 0 && (
-          <div className="p-6 bg-slate-50 border-t border-slate-100">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center italic">
-              * Data realisasi dihitung berdasarkan laporan yang masuk dalam rentang tanggal filter yang dipilih.
-            </p>
-          </div>
-        )}
+        <div className="p-6 bg-slate-50 border-t border-slate-100">
+          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center italic">
+            * Data realisasi secara default menampilkan bulan berjalan ({initStart} s/d {initEnd}).
+          </p>
+        </div>
       </div>
     </div>
   );
