@@ -1,0 +1,22 @@
+
+{
+  "name": "Yandal Patrol PLN",
+  "short_name": "Yandal Patrol",
+  "description": "Monitoring Yandal Patrol PLN ES Bukittinggi",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0e7490",
+  "theme_color": "#0e7490",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/plnesbukittinggi-ai/yandal_patrol/main/ChatGPT%20Image%2018%20Des%202025%2C%2011.11.52.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://raw.githubusercontent.com/plnesbukittinggi-ai/yandal_patrol/main/ChatGPT%20Image%2018%20Des%202025%2C%2011.11.52.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
