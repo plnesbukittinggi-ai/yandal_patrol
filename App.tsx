@@ -162,15 +162,21 @@ const App: React.FC = () => {
       console.log("Data diterima dari server:", data);
       
       if (data) {
+        if (data.status === 'error') {
+          throw new Error(data.message || "Server mengembalikan error.");
+        }
+
         if (data.reports) {
           console.log(`Ditemukan ${data.reports.length} laporan.`);
           setReports(data.reports);
           
-          // Update lastReportId untuk notifikasi
           if (data.reports.length > 0) {
             const sorted = [...data.reports].sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             lastReportIdRef.current = sorted[0].id;
           }
+        } else {
+          console.warn("Data diterima tapi tidak ada field 'reports'.");
+          setReports([]);
         }
         
         if (data.masterData) {
@@ -181,6 +187,8 @@ const App: React.FC = () => {
           });
           setMasterData(updatedMaster);
         }
+      } else {
+        throw new Error("Server tidak mengembalikan data.");
       }
     } catch (error: any) {
       console.error("Gagal mengambil data:", error);
