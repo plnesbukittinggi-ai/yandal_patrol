@@ -9,7 +9,7 @@ import { AdminRekap } from './components/AdminRekap';
 import { FileBackup } from './components/FileBackup';
 import { LoginConfig } from './components/LoginConfig';
 import { UpdateList } from './components/UpdateList';
-import { UpdatePhotoForm } from './components/UpdatePhotoForm';
+import { UpdatePhotoForm } from '@/components/UpdatePhotoForm';
 import { DATA_ULP as INITIAL_DATA_ULP, APP_VERSION } from './constants';
 import { api } from './services/api';
 
