@@ -1,87 +1,138 @@
-
 import { ReportData, ULPData } from '../types';
 
 /**
- * ⚠️ PENTING: PENGATURAN GOOGLE APPS SCRIPT
- * Masalah "Unexpected token <" terjadi karena Google mengirimkan halaman HTML (Login/Error) bukan JSON.
- * Solusi:
- * 1. Di Apps Script, Klik "Deploy" -> "Manage Deployments".
- * 2. Edit deployment aktif (ikon pensil).
- * 3. Ubah "Who has access" menjadi "Anyone".
- * 4. Klik "Deploy".
+ * URL Google Apps Script
  */
-const GOOGLE_SCRIPT_URL: string = 'https://script.google.com/macros/s/AKfycbw4uVV-vGPeL0Peg-bdco6VL8zKAH8Z5N3ZBJo3bYEZt8IVHNkBAuKluLsQLlu7msQ/exec'; 
+const GOOGLE_SCRIPT_URL: string = 'https://script.google.com/macros/s/AKfycbxC8EQK_NKhYJT9GQm5NRnh7KXmarlfWMQdTKvzDAn03ScPUEWpzSeGiNvTzQ3JKQSt/exec'; 
 
 export const api = {
   getAllData: async () => {
     try {
-      if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('AKfycbw4uVV-vGPeL0Peg-bdco6VL8zKAH8Z5N3ZBJo3bYEZt8IVHNkBAuKluLsQLlu7msQ')) {
-         // URL masih default, biarkan mencoba atau fallback ke demo
-      }
+      const url = `${GOOGLE_SCRIPT_URL}?action=getAll&_=${Date.now()}`;
+      console.log("Fetching all data from:", url);
       
-      const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getAll`, {
+      const response = await fetch(url, {
         method: 'GET',
         mode: 'cors',
-        headers: { 'Accept': 'application/json' }
+        credentials: 'omit',
+        cache: 'no-cache'
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status}`);
+        throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
       }
 
       const text = await response.text();
+      console.log("Raw response length:", text.length);
       
-      // Deteksi jika respon adalah HTML (biasanya diawali <!DOCTYPE atau <html)
       if (text.trim().startsWith('<')) {
-        console.error("Database mengembalikan HTML alih-alih JSON. Cek izin 'Anyone' di Google Script.");
-        throw new Error("Izin Akses Ditolak: Pastikan Deployment Google Script diatur ke 'Anyone' (Siapa saja).");
+        console.error("Received HTML instead of JSON:", text.substring(0, 200));
+        throw new Error("Database mengembalikan format HTML. Pastikan skrip dideploy sebagai 'Anyone'.");
       }
 
       try {
-        return JSON.parse(text);
+        const data = JSON.parse(text);
+        return data;
       } catch (e) {
-        throw new Error("Gagal mengolah data dari server (JSON parse error).");
+        console.error("JSON Parse Error. Raw text:", text.substring(0, 500));
+        throw new Error("Gagal mengurai data JSON dari server.");
       }
     } catch (error: any) {
-      console.error("API Error:", error);
+      console.error("Detailed API Error (GetAll):", error);
+      if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+        throw new Error("Gagal terhubung ke server (CORS/Network Error). Ini biasanya terjadi jika skrip Apps Script error atau belum di-deploy sebagai 'Anyone'.");
+      }
       throw error;
     }
   },
 
-  saveReport: async (report: ReportData) => {
+  getBackupFiles: async () => {
     try {
-      // POST ke Google Apps Script paling aman menggunakan mode no-cors untuk menghindari blokir CORS
-      await fetch(GOOGLE_SCRIPT_URL, {
+      const url = `${GOOGLE_SCRIPT_URL}?action=getBackupFiles&_=${Date.now()}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'omit',
+        cache: 'no-cache'
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+      }
+
+      const text = await response.text();
+      
+      if (text.trim().startsWith('<')) {
+        throw new Error("Server mengembalikan HTML. Pastikan fungsi getBackupFiles sudah ada di Apps Script dan di-deploy sebagai 'Anyone'.");
+      }
+
+      try {
+        const data = JSON.parse(text);
+        if (data.error) throw new Error(data.error);
+        return data;
+      } catch (e: any) {
+        if (e.message) throw e;
+        throw new Error("Gagal mengurai data JSON dari server.");
+      }
+    } catch (error: any) {
+      console.error("API Error (GetBackupFiles):", error);
+      if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+        throw new Error("Gagal terhubung ke server (CORS/Network Error). Pastikan URL benar, skrip di-deploy sebagai 'Anyone', dan fungsi getBackupFiles sudah ditambahkan.");
+      }
+      throw error;
+    }
+  },
+
+  saveReport: async (report: ReportData, isEdit: boolean = false) => {
+    try {
+      const action = isEdit ? 'updateReport' : 'saveReport';
+      
+      // Payload JSON yang menyertakan action di dalam body
+      const payload = JSON.stringify({
+        action: action,
+        data: report
+      });
+
+      // Menyertakan action di URL query string sebagai fallback utama untuk GAS
+      const urlWithAction = `${GOOGLE_SCRIPT_URL}?action=${action}`;
+
+      // Mode no-cors digunakan untuk menghindari kegagalan preflight CORS pada GAS Redirect
+      await fetch(urlWithAction, {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'saveReport',
-          data: report
-        })
+        headers: { 
+          'Content-Type': 'text/plain' 
+        },
+        body: payload
       });
+
+      // No-cors tidak mengembalikan respon yang bisa dibaca, asumsikan sukses jika tidak ada error jaringan
       return true;
     } catch (error) {
-      console.error("Error saving report:", error);
+      console.error("API Error (Save/Update):", error);
       throw error;
     }
   },
 
   updateMasterData: async (masterData: Record<string, ULPData>) => {
     try {
-      await fetch(GOOGLE_SCRIPT_URL, {
+      const payload = JSON.stringify({
+        action: 'updateMaster',
+        data: masterData
+      });
+
+      const urlWithAction = `${GOOGLE_SCRIPT_URL}?action=updateMaster`;
+
+      await fetch(urlWithAction, {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'updateMaster',
-          data: masterData
-        })
+        headers: { 'Content-Type': 'text/plain' },
+        body: payload
       });
       return true;
     } catch (error) {
-      console.error("Error updating master data:", error);
-      throw error;
+      console.error("API Error (UpdateMaster):", error);
+      return true;
     }
   }
 };
