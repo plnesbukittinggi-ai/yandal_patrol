@@ -46,4 +46,15 @@ export interface LoginSession {
   petugas2: string | null;
 }
 
-export type ViewState = 'LOGIN' | 'CONFIG' | 'DASHBOARD' | 'INPUT' | 'TABLE' | 'SETTINGS' | 'ABOUT' | 'REKAP';
+export interface DriveFile {
+  id: string;
+  name: string;
+  mimeType: string;
+  size?: string;
+  createdTime?: string;
+  thumbnailLink?: string;
+  webViewLink?: string;
+  webContentLink?: string;
+}
+
+export type ViewState = 'LOGIN' | 'CONFIG' | 'DASHBOARD' | 'INPUT' | 'TABLE' | 'SETTINGS' | 'ABOUT' | 'REKAP' | 'UPDATE_LIST' | 'UPDATE_FORM' | 'BACKUP';
