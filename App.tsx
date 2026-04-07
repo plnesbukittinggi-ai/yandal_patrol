@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { UserRole, ViewState, ReportData, ULPName, ULPData, LoginSession } from './types';
+import { UserRole, ViewState, ReportData, ULPName, ULPData, LoginSession, DriveFile } from './types';
 import { InputForm } from './components/InputForm';
 import { Dashboard } from './components/Dashboard';
 import { DataTable } from './components/DataTable';
@@ -53,6 +53,10 @@ const App: React.FC = () => {
   const [tableUlpFilter, setTableUlpFilter] = useState<ULPName | ''>('');
 
   const [reports, setReports] = useState<ReportData[]>([]);
+  const [backupFiles, setBackupFiles] = useState<DriveFile[]>([]);
+  const [isBackupLoading, setIsBackupLoading] = useState(false);
+  const [backupError, setBackupError] = useState<string | null>(null);
+  const [lastBackupFetch, setLastBackupFetch] = useState<number>(0);
   const [masterData, setMasterData] = useState<Record<string, ULPData>>(INITIAL_DATA_ULP);
   const [editingReport, setEditingReport] = useState<ReportData | null>(null);
   const [updatingReport, setUpdatingReport] = useState<ReportData | null>(null);
@@ -152,6 +156,38 @@ const App: React.FC = () => {
   useEffect(() => {
     if (view === 'TABLE' && !isDemoMode) fetchData(false);
   }, [tableStartDate, tableEndDate, tableUlpFilter, view]);
+
+  const fetchBackupFiles = async (force = false) => {
+    // Cache for 5 minutes unless forced
+    if (!force && backupFiles.length > 0 && Date.now() - lastBackupFetch < 300000) {
+      return;
+    }
+
+    setIsBackupLoading(true);
+    setBackupError(null);
+    try {
+      const data = await api.getBackupFiles();
+      if (data && Array.isArray(data)) {
+        setBackupFiles(data);
+        setLastBackupFetch(Date.now());
+      } else if (data && (data as any).error) {
+        throw new Error((data as any).error);
+      } else {
+        throw new Error("Format data tidak valid");
+      }
+    } catch (err: any) {
+      console.error("Error fetching backup files:", err);
+      setBackupError(err.message || "Gagal mengambil daftar file backup.");
+    } finally {
+      setIsBackupLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (view === 'BACKUP') {
+      fetchBackupFiles();
+    }
+  }, [view]);
 
   const fetchData = async (showLoading = true) => {
     if (isDemoMode) return;
@@ -449,7 +485,14 @@ const App: React.FC = () => {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-8">
         {view === 'DASHBOARD' && <Dashboard reports={filteredReportsForTable.filter(r => !session.ulp || r.ulp === session.ulp)} />}
         {view === 'REKAP' && role === UserRole.ADMIN && <AdminRekap reports={reports} masterData={masterData} />}
-        {view === 'BACKUP' && role === UserRole.ADMIN && <FileBackup />}
+        {view === 'BACKUP' && role === UserRole.ADMIN && (
+          <FileBackup 
+            files={backupFiles} 
+            loading={isBackupLoading} 
+            error={backupError} 
+            onRefresh={() => fetchBackupFiles(true)} 
+          />
+        )}
         {view === 'SETTINGS' && role === UserRole.ADMIN && (
           <AdminSettings 
             masterData={masterData}
