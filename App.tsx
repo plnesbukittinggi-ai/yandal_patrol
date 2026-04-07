@@ -64,6 +64,7 @@ const App: React.FC = () => {
   const pendingUpdatesRef = useRef<Map<string, string>>(new Map());
   const lastReportIdRef = useRef<string | null>(null);
   const lastPeriodicNotifyRef = useRef<number>(0);
+  const lastReminderNotifyRef = useRef<string>("");
 
   const requestNotificationPermission = async () => {
     if ('Notification' in window) {
@@ -137,6 +138,26 @@ const App: React.FC = () => {
     }
   };
 
+  const checkReminderNotification = () => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    
+    // Notifikasi setiap 15 menit antara jam 08:00 - 18:00 WIB
+    if ((currentHour >= 8 && currentHour < 18) || (currentHour === 18 && currentMinute === 0)) {
+      if (currentMinute % 15 === 0) {
+        const timeKey = `${now.toDateString()}-${currentHour}:${currentMinute}`;
+        if (lastReminderNotifyRef.current !== timeKey) {
+          lastReminderNotifyRef.current = timeKey;
+          sendBrowserNotification(
+            "Sudahkah Anda Melakukan Yandal Patrol hari ini ...?",
+            "Jangan lupa untuk melaporkan kegiatan patroli Anda tepat waktu."
+          );
+        }
+      }
+    }
+  };
+
   useEffect(() => {
     if ('Notification' in window) {
       setNotifPermission(Notification.permission);
@@ -150,8 +171,23 @@ const App: React.FC = () => {
     }
     fetchData(true);
     const poller = setInterval(() => fetchData(false), 120000);
-    return () => clearInterval(poller);
+    
+    // Poller untuk notifikasi pengingat dan berkala
+    const notifPoller = setInterval(() => {
+      checkReminderNotification();
+    }, 30000); // Cek setiap 30 detik agar tidak terlewat menit ke-15
+
+    return () => {
+      clearInterval(poller);
+      clearInterval(notifPoller);
+    };
   }, []);
+
+  useEffect(() => {
+    if (reports.length > 0) {
+      checkPeriodicNotification(reports);
+    }
+  }, [reports]);
 
   useEffect(() => {
     if (view === 'TABLE' && !isDemoMode) fetchData(false);
