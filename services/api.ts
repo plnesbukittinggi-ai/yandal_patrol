@@ -1,4 +1,5 @@
 import { ReportData, ULPData } from '../types';
+import { BACKUP_FOLDER_ID } from '../constants';
 
 /**
  * URL Google Apps Script
@@ -48,37 +49,46 @@ export const api = {
 
   getBackupFiles: async () => {
     try {
-      const url = `${GOOGLE_SCRIPT_URL}?action=getBackupFiles&_=${Date.now()}`;
+      // Pastikan folderId terkirim dengan benar
+      const url = `${GOOGLE_SCRIPT_URL}?action=getBackupFiles&folderId=${BACKUP_FOLDER_ID}&_=${Date.now()}`;
+      
       const response = await fetch(url, {
         method: 'GET',
         mode: 'cors',
-        credentials: 'omit',
-        cache: 'no-cache'
+        cache: 'no-store' // Hindari cache agar data selalu fresh
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+        throw new Error(`HTTP Error: ${response.status}`);
       }
 
       const text = await response.text();
       
+      // Cek apakah response berupa HTML (biasanya tanda error GAS)
       if (text.trim().startsWith('<')) {
-        throw new Error("Server mengembalikan HTML. Pastikan fungsi getBackupFiles sudah ada di Apps Script dan di-deploy sebagai 'Anyone'.");
+        throw new Error("Server mengembalikan format HTML. Pastikan skrip sudah di-deploy sebagai 'Anyone'.");
       }
 
+      let data;
       try {
-        const data = JSON.parse(text);
-        if (data.error) throw new Error(data.error);
-        return data;
-      } catch (e: any) {
-        if (e.message) throw e;
-        throw new Error("Gagal mengurai data JSON dari server.");
+        data = JSON.parse(text);
+      } catch (e) {
+        throw new Error("Gagal mengurai JSON: " + text.substring(0, 100));
       }
+      
+      // Jika server mengembalikan objek dengan properti error
+      if (data && typeof data === 'object' && !Array.isArray(data) && data.error) {
+        throw new Error(data.error);
+      }
+      
+      return Array.isArray(data) ? data : [];
     } catch (error: any) {
       console.error("API Error (GetBackupFiles):", error);
-      if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
-        throw new Error("Gagal terhubung ke server (CORS/Network Error). Pastikan URL benar, skrip di-deploy sebagai 'Anyone', dan fungsi getBackupFiles sudah ditambahkan.");
+      
+      if (error.message.includes('parameter')) {
+        throw new Error("Server Error: Parameter 'e' tidak terbaca. Pastikan fungsi doGet meneruskan 'e' ke getBackupFiles(e).");
       }
+      
       throw error;
     }
   },
@@ -87,26 +97,28 @@ export const api = {
     try {
       const action = isEdit ? 'updateReport' : 'saveReport';
       
-      // Payload JSON yang menyertakan action di dalam body
       const payload = JSON.stringify({
         action: action,
         data: report
       });
 
-      // Menyertakan action di URL query string sebagai fallback utama untuk GAS
       const urlWithAction = `${GOOGLE_SCRIPT_URL}?action=${action}`;
 
-      // Mode no-cors digunakan untuk menghindari kegagalan preflight CORS pada GAS Redirect
-      await fetch(urlWithAction, {
+      // Menggunakan mode: 'cors' dengan 'text/plain' agar bisa mendeteksi status sukses/gagal
+      // tanpa memicu preflight OPTIONS request yang tidak didukung GAS.
+      const response = await fetch(urlWithAction, {
         method: 'POST',
-        mode: 'no-cors',
+        mode: 'cors',
         headers: { 
           'Content-Type': 'text/plain' 
         },
         body: payload
       });
 
-      // No-cors tidak mengembalikan respon yang bisa dibaca, asumsikan sukses jika tidak ada error jaringan
+      if (!response.ok && response.status !== 0) {
+        throw new Error(`Gagal menyimpan data (HTTP ${response.status})`);
+      }
+
       return true;
     } catch (error) {
       console.error("API Error (Save/Update):", error);

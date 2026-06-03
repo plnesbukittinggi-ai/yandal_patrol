@@ -328,8 +328,28 @@ const App: React.FC = () => {
   };
 
   const handleBackToMenu = () => {
-     if (view === 'CONFIG') { setView('LOGIN'); setRole(null); }
-     else { if (role === UserRole.ADMIN) setView('DASHBOARD'); else { setView('LOGIN'); setRole(null); } }
+     if (view === 'CONFIG') { 
+       setView('LOGIN'); 
+       setRole(null); 
+       setSession({ ulp: null, petugas1: null, petugas2: null });
+       const { firstDay, lastDay } = getCurrentMonthRange();
+       setTableStartDate(firstDay);
+       setTableEndDate(lastDay);
+       setTableUlpFilter('');
+     }
+     else { 
+       if (role === UserRole.ADMIN) {
+         setView('DASHBOARD'); 
+       } else { 
+         setView('LOGIN'); 
+         setRole(null); 
+         setSession({ ulp: null, petugas1: null, petugas2: null });
+         const { firstDay, lastDay } = getCurrentMonthRange();
+         setTableStartDate(firstDay);
+         setTableEndDate(lastDay);
+         setTableUlpFilter('');
+       } 
+     }
      setEditingReport(null);
      setUpdatingReport(null);
   };
@@ -401,8 +421,10 @@ const App: React.FC = () => {
         { header: 'Keypoint', key: 'keypoint', width: 22 },
         { header: 'Titik Start', key: 'start', width: 25 },
         { header: 'Titik Finish', key: 'finish', width: 25 },
-        ...Array(6).fill(0).map((_, i) => ({ header: `Foto Sblm ${i+1}`, key: `sblm${i+1}`, width: 25 })),
-        ...Array(6).fill(0).map((_, i) => ({ header: `Foto Ssdh ${i+1}`, key: `ssdh${i+1}`, width: 25 })),
+        ...Array(10).fill(0).flatMap((_, i) => [
+          { header: `Foto Sblm ${i+1}`, key: `sblm${i+1}`, width: 25 },
+          { header: `Foto Ssdh ${i+1}`, key: `ssdh${i+1}`, width: 25 }
+        ]),
       ];
       worksheet.columns = columns;
 
@@ -411,10 +433,10 @@ const App: React.FC = () => {
       headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0E7490' } };
       headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
-      // Helper to pad the array of photo URLs to length 6
+      // Helper to pad the array of photo URLs to length 10
       const prepPhotos = (photosArray: (string | null)[]) => {
         const result: string[] = [];
-        for (let idx = 0; idx < 6; idx++) {
+        for (let idx = 0; idx < 10; idx++) {
           result.push(photosArray[idx] || '');
         }
         return result;
@@ -489,8 +511,13 @@ const App: React.FC = () => {
         // We write Hyperlinks to the cell values as a fallback.
         // That way, if downloading fails or user opens Excel without internet,
         // they can still click to view!
-        const sblmFormulas = sblmList.map((url, idx) => url ? { formula: `HYPERLINK("${url}", "Lihat Sblm ${idx + 1}")` } : '');
-        const ssdhFormulas = ssdhList.map((url, idx) => url ? { formula: `HYPERLINK("${url}", "Lihat Ssdh ${idx + 1}")` } : '');
+        const photoFormulas: any[] = [];
+        for (let idx = 0; idx < 10; idx++) {
+          const sblmUrl = sblmList[idx];
+          const ssdhUrl = ssdhList[idx];
+          photoFormulas.push(sblmUrl ? { formula: `HYPERLINK("${sblmUrl}", "Lihat Sblm ${idx + 1}")` } : '');
+          photoFormulas.push(ssdhUrl ? { formula: `HYPERLINK("${ssdhUrl}", "Lihat Ssdh ${idx + 1}")` } : '');
+        }
 
         currentRow.values = [
           i + 1,
@@ -503,17 +530,16 @@ const App: React.FC = () => {
           r.keypoint || '',
           r.titikStart || '',
           r.titikFinish || '',
-          ...sblmFormulas,
-          ...ssdhFormulas
+          ...photoFormulas
         ];
         currentRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
 
-        // Collect download tasks
+        // Collect download tasks with interleaved columns
         sblmList.forEach((url, idx) => {
-          if (url) downloadTasks.push({ rowIndex, colIndex: 11 + idx, url });
+          if (url) downloadTasks.push({ rowIndex, colIndex: 11 + (2 * idx), url });
         });
         ssdhList.forEach((url, idx) => {
-          if (url) downloadTasks.push({ rowIndex, colIndex: 17 + idx, url });
+          if (url) downloadTasks.push({ rowIndex, colIndex: 12 + (2 * idx), url });
         });
       }
 

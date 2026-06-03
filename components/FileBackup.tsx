@@ -1,44 +1,36 @@
 
-import React, { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import React, { useState, useMemo } from 'react';
 import { DriveFile } from '../types';
+import { BACKUP_FOLDER_ID } from '../constants';
 
-export const FileBackup: React.FC = () => {
-  const [files, setFiles] = useState<DriveFile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface FileBackupProps {
+  files: DriveFile[];
+  loading: boolean;
+  error: string | null;
+  onRefresh: () => void;
+}
+
+const ITEMS_PER_PAGE = 20;
+
+export const FileBackup: React.FC<FileBackupProps> = ({ files, loading, error, onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [displayLimit, setDisplayLimit] = useState(ITEMS_PER_PAGE);
 
-  const fetchFiles = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await api.getBackupFiles();
-      if (data && Array.isArray(data)) {
-        setFiles(data);
-      } else if (data && data.error) {
-        throw new Error(data.error);
-      } else {
-        throw new Error("Format data tidak valid");
-      }
-    } catch (err: any) {
-      console.error("Error fetching backup files:", err);
-      const message = err.message === 'Failed to fetch' 
-        ? "Gagal terhubung ke server (Network Error). Pastikan Google Apps Script sudah di-deploy sebagai 'Anyone' dan fungsi getBackupFiles sudah ditambahkan."
-        : err.message || "Gagal mengambil daftar file backup.";
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
+  const filteredFiles = useMemo(() => {
+    return files.filter(file => 
+      file.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [files, searchTerm]);
+
+  const displayedFiles = useMemo(() => {
+    return filteredFiles.slice(0, displayLimit);
+  }, [filteredFiles, displayLimit]);
+
+  const hasMore = filteredFiles.length > displayLimit;
+
+  const handleLoadMore = () => {
+    setDisplayLimit(prev => prev + ITEMS_PER_PAGE);
   };
-
-  useEffect(() => {
-    fetchFiles();
-  }, []);
-
-  const filteredFiles = files.filter(file => 
-    file.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const getFileIcon = (mimeType: string) => {
     if (mimeType.includes('pdf')) return (
@@ -77,9 +69,21 @@ export const FileBackup: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-2xl font-black text-slate-800 uppercase">File BackUp</h2>
+        <div>
+          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">File BackUp</h2>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total: {filteredFiles.length} File</p>
+            <span className="w-1 h-1 bg-slate-200 rounded-full hidden sm:block"></span>
+            <p className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+              </svg>
+              Folder ID: <span className="font-black select-all">{BACKUP_FOLDER_ID}</span>
+            </p>
+          </div>
+        </div>
         <button 
-          onClick={fetchFiles}
+          onClick={onRefresh}
           disabled={loading}
           className="bg-primary text-white px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg flex items-center gap-2 hover:bg-cyan-800 transition-all disabled:opacity-50"
         >
@@ -93,9 +97,12 @@ export const FileBackup: React.FC = () => {
       <div className="relative">
         <input
           type="text"
-          placeholder="Cari file backup..."
+          placeholder="Cari file backup berdasarkan nama..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setDisplayLimit(ITEMS_PER_PAGE); // Reset limit on search
+          }}
           className="w-full bg-white border-2 border-slate-100 rounded-2xl px-12 py-4 text-sm font-bold text-slate-700 focus:border-primary focus:outline-none transition-all shadow-sm"
         />
         <svg className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -104,7 +111,7 @@ export const FileBackup: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-[2rem] shadow-xl border border-slate-200 overflow-hidden min-h-[400px]">
-        {loading ? (
+        {loading && files.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[400px] gap-4">
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
             <p className="text-slate-500 font-bold animate-pulse uppercase text-xs tracking-widest">Memuat Daftar File...</p>
@@ -118,7 +125,7 @@ export const FileBackup: React.FC = () => {
             </div>
             <p className="text-slate-600 font-bold max-w-md">{error}</p>
             <button 
-              onClick={fetchFiles}
+              onClick={onRefresh}
               className="text-primary font-black uppercase text-xs tracking-widest hover:underline"
             >
               Coba Lagi
@@ -135,7 +142,7 @@ export const FileBackup: React.FC = () => {
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
-            {filteredFiles.map((file) => (
+            {displayedFiles.map((file) => (
               <div key={file.id} className="p-4 sm:p-6 flex items-center justify-between hover:bg-slate-50 transition-colors group">
                 <div className="flex items-center gap-4 min-w-0">
                   <div className="shrink-0">
@@ -175,6 +182,17 @@ export const FileBackup: React.FC = () => {
                 </a>
               </div>
             ))}
+            
+            {hasMore && (
+              <div className="p-8 flex justify-center">
+                <button 
+                  onClick={handleLoadMore}
+                  className="px-8 py-3 bg-slate-100 text-slate-600 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all"
+                >
+                  Tampilkan Lebih Banyak ({filteredFiles.length - displayLimit} File Lagi)
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

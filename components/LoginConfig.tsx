@@ -11,12 +11,12 @@ interface LoginConfigProps {
 }
 
 export const LoginConfig: React.FC<LoginConfigProps> = ({ role, masterData, onConfirm, onBack, appLogo }) => {
-  const [ulp, setUlp] = useState<ULPName | ''>('');
+  const [ulp, setUlp] = useState<ULPName | 'UP3' | ''>('');
   const [petugas1, setPetugas1] = useState('');
   const [petugas2, setPetugas2] = useState('');
 
   const isGuest = role === UserRole.GUEST;
-  const ulpData = ulp ? masterData[ulp] : null;
+  const ulpData = (ulp && ulp !== 'UP3') ? masterData[ulp as ULPName] : null;
 
   const handleConfirm = (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +24,8 @@ export const LoginConfig: React.FC<LoginConfigProps> = ({ role, masterData, onCo
     if (!isGuest && (!petugas1 || !petugas2)) return;
 
     onConfirm({
-      ulp: ulp as ULPName,
+      // Jika UP3 dipilih, kita kirim null agar App.tsx menampilkan semua data
+      ulp: ulp === 'UP3' ? null : (ulp as ULPName),
       petugas1: isGuest ? null : petugas1,
       petugas2: isGuest ? null : petugas2
     });
@@ -43,19 +44,22 @@ export const LoginConfig: React.FC<LoginConfigProps> = ({ role, masterData, onCo
 
         <form onSubmit={handleConfirm} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Pilih ULP</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Pilih Unit Layanan (ULP)</label>
             <select
               required
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white font-bold text-sm"
               value={ulp}
               onChange={(e) => {
-                setUlp(e.target.value as ULPName);
+                setUlp(e.target.value as ULPName | 'UP3');
                 setPetugas1('');
                 setPetugas2('');
               }}
             >
               <option value="">-- Pilih ULP --</option>
-              {Object.values(masterData).map((u) => (
+              {isGuest && (
+                <option value="UP3" className="font-black text-primary">UP3 (GABUNGAN SEMUA ULP)</option>
+              )}
+              {Object.values(masterData).map((u: ULPData) => (
                 <option key={u.name} value={u.name}>{u.name}</option>
               ))}
             </select>
@@ -67,7 +71,7 @@ export const LoginConfig: React.FC<LoginConfigProps> = ({ role, masterData, onCo
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Nama Petugas 1</label>
                 <select
                   required
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white text-sm"
                   value={petugas1}
                   onChange={(e) => setPetugas1(e.target.value)}
                 >
@@ -80,7 +84,7 @@ export const LoginConfig: React.FC<LoginConfigProps> = ({ role, masterData, onCo
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Nama Petugas 2</label>
                 <select
                   required
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white text-sm"
                   value={petugas2}
                   onChange={(e) => setPetugas2(e.target.value)}
                 >
@@ -95,14 +99,14 @@ export const LoginConfig: React.FC<LoginConfigProps> = ({ role, masterData, onCo
             <button
               type="button"
               onClick={onBack}
-              className="flex-1 py-3 px-4 border border-slate-300 text-slate-600 font-semibold rounded-lg hover:bg-slate-50 transition-colors"
+              className="flex-1 py-3 px-4 border border-slate-300 text-slate-600 font-semibold rounded-lg hover:bg-slate-50 transition-colors uppercase text-[10px] tracking-widest"
             >
               Kembali
             </button>
             <button
               type="submit"
               disabled={!ulp || (!isGuest && (!petugas1 || !petugas2))}
-              className="flex-[2] py-3 px-4 bg-primary text-white font-bold rounded-lg hover:bg-cyan-800 transition-colors shadow-lg shadow-cyan-100 disabled:opacity-50"
+              className="flex-[2] py-3 px-4 bg-primary text-white font-black rounded-lg hover:bg-cyan-800 transition-colors shadow-lg shadow-cyan-100 disabled:opacity-50 uppercase text-[10px] tracking-widest"
             >
               Masuk Aplikasi
             </button>

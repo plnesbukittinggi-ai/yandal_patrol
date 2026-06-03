@@ -1,7 +1,7 @@
 
 import { ULPName, ULPData } from './types';
 
-export const APP_VERSION = '1.0.5';
+export const APP_VERSION = '1.0.4';
 
 export const DATA_ULP: Record<string, ULPData> = {
   [ULPName.BUKITTINGGI]: {
@@ -80,4 +80,6 @@ export const MONTHS = [
   "Juli", "Agustus", "September", "Oktober", "November", "Desember"
 ];
 
-export const PHOTO_SECTIONS = [1, 2, 3, 4, 5, 6];
+export const PHOTO_SECTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+export const BACKUP_FOLDER_ID = '1k9LrnWhKPUPYBiAZvCQllwZIDmDIjgQ0';

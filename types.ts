@@ -28,8 +28,8 @@ export interface ReportData {
   titikStart: string;
   titikFinish: string;
   photos: {
-    sebelum: (string | null)[]; // Array of 6 URLs/Base64
-    sesudah: (string | null)[]; // Array of 6 URLs/Base64
+    sebelum: (string | null)[]; // Array of 10 URLs/Base64
+    sesudah: (string | null)[]; // Array of 10 URLs/Base64
   };
 }
 

@@ -10,8 +10,16 @@ interface UpdatePhotoFormProps {
 }
 
 export const UpdatePhotoForm: React.FC<UpdatePhotoFormProps> = ({ report, onSubmit, onCancel }) => {
-  const [photosSebelum, setPhotosSebelum] = useState<(string | null)[]>(report.photos.sebelum);
-  const [photosSesudah, setPhotosSesudah] = useState<(string | null)[]>(report.photos.sesudah);
+  const [photosSebelum, setPhotosSebelum] = useState<(string | null)[]>(() => {
+    const arr = [...(report.photos?.sebelum || [])];
+    while (arr.length < 10) arr.push(null);
+    return arr.slice(0, 10);
+  });
+  const [photosSesudah, setPhotosSesudah] = useState<(string | null)[]>(() => {
+    const arr = [...(report.photos?.sesudah || [])];
+    while (arr.length < 10) arr.push(null);
+    return arr.slice(0, 10);
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 

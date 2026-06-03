@@ -21,8 +21,22 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const [photosSebelum, setPhotosSebelum] = useState<(string | null)[]>(editData?.photos?.sebelum || Array(6).fill(null));
-  const [photosSesudah, setPhotosSesudah] = useState<(string | null)[]>(editData?.photos?.sesudah || Array(6).fill(null));
+  const [photosSebelum, setPhotosSebelum] = useState<(string | null)[]>(() => {
+    if (editData?.photos?.sebelum) {
+      const arr = [...editData.photos.sebelum];
+      while (arr.length < 10) arr.push(null);
+      return arr.slice(0, 10);
+    }
+    return Array(10).fill(null);
+  });
+  const [photosSesudah, setPhotosSesudah] = useState<(string | null)[]>(() => {
+    if (editData?.photos?.sesudah) {
+      const arr = [...editData.photos.sesudah];
+      while (arr.length < 10) arr.push(null);
+      return arr.slice(0, 10);
+    }
+    return Array(10).fill(null);
+  });
 
   const currentUlp = sessionData.ulp || editData?.ulp;
   const ulpData = currentUlp ? masterData[currentUlp] : null;
@@ -234,7 +248,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
                 <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Dokumentasi Foto</h3>
                 <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Minimal lampirkan foto sebelum dan sesudah pekerjaan</p>
              </div>
-             <span className="text-[9px] font-black text-primary bg-cyan-50 border border-cyan-100 px-3 py-1.5 rounded-full uppercase tracking-widest">Maksimal 12 Foto</span>
+             <span className="text-[9px] font-black text-primary bg-cyan-50 border border-cyan-100 px-3 py-1.5 rounded-full uppercase tracking-widest">Maksimal 20 Foto</span>
           </div>
           
           <div className="space-y-8">

@@ -141,10 +141,10 @@ export const UpdateList: React.FC<UpdateListProps> = ({ reports, session, onUpda
                   <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-amber-400 transition-all duration-500" 
-                      style={{ width: `${(report.photos.sebelum.filter(p => p !== null && p !== '').length / 6) * 100}%` }}
+                      style={{ width: `${(report.photos.sebelum.filter(p => p !== null && p !== '').length / 10) * 100}%` }}
                     ></div>
                   </div>
-                  <span className="text-[9px] font-black text-slate-500">{report.photos.sebelum.filter(p => p !== null && p !== '').length}/6</span>
+                  <span className="text-[9px] font-black text-slate-500">{report.photos.sebelum.filter(p => p !== null && p !== '').length}/10</span>
                 </div>
               </div>
               <div className="space-y-1">
@@ -153,10 +153,10 @@ export const UpdateList: React.FC<UpdateListProps> = ({ reports, session, onUpda
                   <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-cyan-400 transition-all duration-500" 
-                      style={{ width: `${(report.photos.sesudah.filter(p => p !== null && p !== '').length / 6) * 100}%` }}
+                      style={{ width: `${(report.photos.sesudah.filter(p => p !== null && p !== '').length / 10) * 100}%` }}
                     ></div>
                   </div>
-                  <span className="text-[9px] font-black text-slate-500">{report.photos.sesudah.filter(p => p !== null && p !== '').length}/6</span>
+                  <span className="text-[9px] font-black text-slate-500">{report.photos.sesudah.filter(p => p !== null && p !== '').length}/10</span>
                 </div>
               </div>
             </div>
