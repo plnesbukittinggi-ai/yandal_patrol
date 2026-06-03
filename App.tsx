@@ -34,6 +34,12 @@ const LOGO_URL = "https://plnes.co.id/_next/image?url=https%3A%2F%2Fcms.plnes.co
 const APP_LOGO = "https://lh3.googleusercontent.com/d/1ayQWBX032KZs0Cl86OzJO1lxqv-5RDds";
 const NOTIFICATION_SOUND = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3";
 
+const isMobileDevice = () => {
+  if (typeof window === 'undefined' || !navigator) return false;
+  const ua = navigator.userAgent || '';
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+};
+
 declare global {
   interface Window {
     ExcelJS: any;
@@ -84,6 +90,9 @@ const App: React.FC = () => {
   const lastReminderNotifyRef = useRef<string>("");
 
   const requestNotificationPermission = async () => {
+    if (!isMobileDevice()) {
+      return 'default';
+    }
     if ('Notification' in window) {
       const permission = await Notification.requestPermission();
       setNotifPermission(permission);
@@ -93,6 +102,10 @@ const App: React.FC = () => {
   };
 
   const playNotificationSound = () => {
+    if (!isMobileDevice()) {
+      console.log("Muted notification sound: device is PC/Desktop.");
+      return;
+    }
     const audio = new Audio(NOTIFICATION_SOUND);
     audio.play().catch(e => console.log("Audio play blocked"));
   };
@@ -106,6 +119,10 @@ const App: React.FC = () => {
   };
 
   const sendBrowserNotification = (title: string, body: string) => {
+    if (!isMobileDevice()) {
+      console.log("Notification blocked: device is PC/Desktop.");
+      return;
+    }
     if (!('Notification' in window)) return;
     if (Notification.permission === 'granted') {
       playNotificationSound();
@@ -143,6 +160,7 @@ const App: React.FC = () => {
   };
 
   const checkPeriodicNotification = (currentReports: ReportData[]) => {
+    if (!isMobileDevice()) return;
     const now = new Date();
     const currentHour = now.getHours();
     if (currentHour >= 10 && currentHour <= 18) {
@@ -156,6 +174,7 @@ const App: React.FC = () => {
   };
 
   const checkReminderNotification = () => {
+    if (!isMobileDevice()) return;
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
@@ -178,7 +197,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if ('Notification' in window) {
       setNotifPermission(Notification.permission);
-      if (Notification.permission === 'default') requestNotificationPermission();
+      if (isMobileDevice() && Notification.permission === 'default') requestNotificationPermission();
     }
     const savedDemo = localStorage.getItem('yandal_demo_mode');
     if (savedDemo === 'true') {
@@ -992,10 +1011,17 @@ const App: React.FC = () => {
                   <section className="text-center space-y-4">
                     <h2 className="text-xl font-black text-slate-800 uppercase">Status Sistem Notifikasi</h2>
                     <div className="flex flex-col items-center gap-4">
-                      <div className={`px-6 py-3 rounded-2xl flex items-center gap-3 border ${notifPermission === 'granted' ? 'bg-green-50 border-green-200 text-green-700' : notifPermission === 'denied' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
-                        <div className={`w-3 h-3 rounded-full ${notifPermission === 'granted' ? 'bg-green-500 animate-pulse' : notifPermission === 'denied' ? 'bg-red-500' : 'bg-slate-400'}`}></div>
-                        <span className="text-sm font-black uppercase tracking-widest">Izin Notifikasi: {notifPermission === 'granted' ? 'Aktif' : notifPermission === 'denied' ? 'Diblokir' : 'Belum Diizinkan'}</span>
-                      </div>
+                      {isMobileDevice() ? (
+                        <div className={`px-6 py-3 rounded-2xl flex items-center gap-3 border ${notifPermission === 'granted' ? 'bg-green-50 border-green-200 text-green-700' : notifPermission === 'denied' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
+                          <div className={`w-3 h-3 rounded-full ${notifPermission === 'granted' ? 'bg-green-500 animate-pulse' : notifPermission === 'denied' ? 'bg-red-500' : 'bg-slate-400'}`}></div>
+                          <span className="text-sm font-black uppercase tracking-widest">Izin Notifikasi: {notifPermission === 'granted' ? 'Aktif' : notifPermission === 'denied' ? 'Diblokir' : 'Belum Diizinkan'}</span>
+                        </div>
+                      ) : (
+                        <div className="px-6 py-3 rounded-2xl flex items-center gap-3 border bg-slate-50 border-slate-200 text-slate-500">
+                          <div className="w-3 h-3 rounded-full bg-slate-400"></div>
+                          <span className="text-sm font-black uppercase tracking-widest">Dinonaktifkan pada PC / Desktop (Hanya Aktif di HP / Android)</span>
+                        </div>
+                      )}
                     </div>
                   </section>
                   <div className="pt-10 border-t border-slate-100 flex flex-col items-center gap-2">
