@@ -426,12 +426,52 @@ const App: React.FC = () => {
           { header: `Foto Ssdh ${i+1}`, key: `ssdh${i+1}`, width: 25 }
         ]),
       ];
-      worksheet.columns = columns;
 
-      const headerRow = worksheet.getRow(1);
+      // Set column keys and widths manually to prevent auto-writing headers on row 1
+      columns.forEach((col, idx) => {
+        const column = worksheet.getColumn(idx + 1);
+        column.key = col.key;
+        column.width = col.width;
+      });
+
+      // Write Custom Top Header Title blocks
+      // Baris 1: REKAP PELAKSANAAN PEKERJAAN YANDAL PATROL
+      worksheet.mergeCells('A1:J1');
+      const title1 = worksheet.getCell('A1');
+      title1.value = 'REKAP PELAKSANAAN PEKERJAAN YANDAL PATROL';
+      title1.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FF0F172A' } };
+      title1.alignment = { horizontal: 'center', vertical: 'middle' };
+
+      // Baris 2: ULP <ULP FILTER> UP3 BUKITTINGGI
+      worksheet.mergeCells('A2:J2');
+      const title2 = worksheet.getCell('A2');
+      const filterUlpText = tableUlpFilter ? tableUlpFilter.toUpperCase() : 'SEMUA ULP';
+      title2.value = `${filterUlpText} UP3 BUKITTINGGI`;
+      title2.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FF334155' } };
+      title2.alignment = { horizontal: 'center', vertical: 'middle' };
+
+      // Baris 3: DARI TANGGAL <tanggal awal filter> SAMPAI <Tanggal akhir Filter>
+      worksheet.mergeCells('A3:J3');
+      const title3 = worksheet.getCell('A3');
+      const startDateFormatted = tableStartDate ? new Date(tableStartDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-';
+      const endDateFormatted = tableEndDate ? new Date(tableEndDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-';
+      title3.value = `DARI TANGGAL ${startDateFormatted.toUpperCase()} SAMPAI ${endDateFormatted.toUpperCase()}`;
+      title3.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FF475569' } };
+      title3.alignment = { horizontal: 'center', vertical: 'middle' };
+
+      // Row Heights for spacing
+      worksheet.getRow(1).height = 25;
+      worksheet.getRow(2).height = 20;
+      worksheet.getRow(3).height = 20;
+      worksheet.getRow(4).height = 10; // spacing/blank row
+
+      // Write Main Table Headers in Row 5
+      const headerRow = worksheet.getRow(5);
+      headerRow.values = columns.map(c => c.header);
       headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
       headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0E7490' } };
       headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+      headerRow.height = 30;
 
       // Helper to pad the array of photo URLs to length 10
       const prepPhotos = (photosArray: (string | null)[]) => {
@@ -501,7 +541,7 @@ const App: React.FC = () => {
 
       for (let i = 0; i < filteredReportsForTable.length; i++) {
         const r = filteredReportsForTable[i];
-        const rowIndex = i + 2;
+        const rowIndex = i + 6; // Data rows start at row 6
         const currentRow = worksheet.getRow(rowIndex);
         currentRow.height = 120;
 
@@ -567,15 +607,17 @@ const App: React.FC = () => {
         }));
       }
 
-      worksheet.eachRow((row) => {
-        row.eachCell((cell) => {
-          cell.border = {
-            top: { style: 'thin' },
-            left: { style: 'thin' },
-            bottom: { style: 'thin' },
-            right: { style: 'thin' }
-          };
-        });
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber >= 5) {
+          row.eachCell((cell) => {
+            cell.border = {
+              top: { style: 'thin' },
+              left: { style: 'thin' },
+              bottom: { style: 'thin' },
+              right: { style: 'thin' }
+            };
+          });
+        }
       });
 
       const buffer = await workbook.xlsx.writeBuffer();
