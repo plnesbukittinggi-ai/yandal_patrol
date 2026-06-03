@@ -90,6 +90,16 @@ export const UpdatePhotoForm: React.FC<UpdatePhotoFormProps> = ({ report, onSubm
     e.preventDefault();
     setIsSubmitting(true);
 
+    const countSebelum = photosSebelum.filter(p => p !== null && p !== '').length;
+    const countSesudah = photosSesudah.filter(p => p !== null && p !== '').length;
+
+    if (countSebelum < 6 || countSesudah < 6) {
+      if (!window.confirm(`FOTO YANG ADA INPUT : ${countSebelum} Sebelum dan ${countSesudah} Sesudah, Apakah Anda Yakin?`)) {
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     // Sanitasi data: Pastikan tidak ada null yang terkirim
     const cleanSebelum = photosSebelum.map(p => (p === null || p === undefined) ? "" : p);
     const cleanSesudah = photosSesudah.map(p => (p === null || p === undefined) ? "" : p);
