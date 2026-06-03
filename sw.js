@@ -1,49 +1,44 @@
+const CACHE_NAME = 'yandal-patrol-v1.9.5';
+const ASSETS = [
+  '/',
+  '/index.html',
+  '/index.css'
+];
 
-const APP_LOGO = "https://raw.githubusercontent.com/plnesbukittinggi-ai/yandal_patrol/main/ChatGPT%20Image%2018%20Des%202025%2C%2011.11.52.png";
-
+// Install Event
 self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(ASSETS).catch((err) => {
+        console.warn('Initial assets caching skipped/failed: ', err);
+      });
+    })
+  );
   self.skipWaiting();
 });
 
+// Activate Event
 self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
-});
-
-// Menangani klik pada notifikasi
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  const urlToOpen = event.notification.data?.url || '/';
-  
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Jika tab sudah terbuka, fokuskan
-      for (var i = 0; i < windowClients.length; i++) {
-        var client = windowClients[i];
-        if (client.url === urlToOpen && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      // Jika tidak, buka tab baru
-      if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
-      }
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
+          }
+        })
+      );
     })
   );
+  self.clients.claim();
 });
 
-// Listener untuk pesan dari App utama
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
-    const { title, body } = event.data.payload;
-    const options = {
-      body,
-      icon: APP_LOGO,
-      badge: APP_LOGO,
-      tag: 'yandal-patrol-notif',
-      renotify: true,
-      vibrate: [200, 100, 200],
-      data: { url: self.registration.scope }
-    };
-    self.registration.showNotification(title, options);
-  }
+// Fetch Event
+self.addEventListener('fetch', (event) => {
+  // Let browser handle requests, fallback to cache if offline
+  event.respondWith(
+    fetch(event.request).catch(() => {
+      return caches.match(event.request);
+    })
+  );
 });
