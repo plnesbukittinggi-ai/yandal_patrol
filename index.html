@@ -8,10 +8,20 @@
     <!-- Favicon & Mobile Icons -->
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/plnesbukittinggi-ai/yandal_patrol/main/ChatGPT%20Image%2018%20Des%202025%2C%2011.11.52.png" />
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/plnesbukittinggi-ai/yandal_patrol/main/ChatGPT%20Image%2018%20Des%202025%2C%2011.11.52.png" />
-    <link rel="manifest" href="manifest.json" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Yandal Patrol" />
     <meta name="theme-color" content="#0e7490" />
+    <link rel="manifest" href="/manifest.json" />
+    
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((reg) => console.log('Service Worker registered successfully!', reg.scope))
+            .catch((err) => console.error('Service Worker registration failed:', err));
+        });
+      }
+    </script>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- ExcelJS for Excel Export with Images - Menggunakan JSDelivr untuk reliabilitas lebih tinggi -->
@@ -52,9 +62,10 @@
   }
 }
 </script>
+<link rel="stylesheet" href="/index.css">
 </head>
   <body class="bg-slate-50 text-slate-900 antialiased">
     <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
