@@ -108,6 +108,16 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
     setIsSubmitting(true);
     const isEditMode = !!editData;
 
+    const countSebelum = photosSebelum.filter(p => p !== null && p !== '').length;
+    const countSesudah = photosSesudah.filter(p => p !== null && p !== '').length;
+
+    if (countSebelum < 6 || countSesudah < 6) {
+      if (!window.confirm(`FOTO YANG ADA INPUT : ${countSebelum} Sebelum dan ${countSesudah} Sesudah, Apakah Anda Yakin?`)) {
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     const now = new Date();
 
     const newReport: ReportData = {
