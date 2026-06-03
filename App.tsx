@@ -1,5 +1,22 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { 
+  User, 
+  ShieldCheck, 
+  BarChart3, 
+  ChevronRight, 
+  Lock,
+  LayoutDashboard,
+  ClipboardList,
+  Database,
+  Sliders,
+  FileText,
+  RefreshCw,
+  Info,
+  Plus,
+  ArrowLeft,
+  LogOut
+} from 'lucide-react';
 import { UserRole, ViewState, ReportData, ULPName, ULPData, LoginSession, DriveFile } from './types';
 import { InputForm } from './components/InputForm';
 import { Dashboard } from './components/Dashboard';
@@ -14,7 +31,7 @@ import { DATA_ULP as INITIAL_DATA_ULP, APP_VERSION } from './constants';
 import { api } from './services/api';
 
 const LOGO_URL = "https://plnes.co.id/_next/image?url=https%3A%2F%2Fcms.plnes.co.id%2Fuploads%2FLogo_HP_New_Temporary_09a9c5a521.png&w=750&q=75"; 
-const APP_LOGO = "https://raw.githubusercontent.com/plnesbukittinggi-ai/yandal_patrol/main/ChatGPT%20Image%2018%20Des%202025%2C%2011.11.52.png";
+const APP_LOGO = "https://lh3.googleusercontent.com/d/1ayQWBX032KZs0Cl86OzJO1lxqv-5RDds";
 const NOTIFICATION_SOUND = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3";
 
 declare global {
@@ -282,6 +299,11 @@ const App: React.FC = () => {
       setRole(UserRole.ADMIN);
       setView('DASHBOARD');
       setShowAdminLogin(false);
+      setSession({ ulp: null, petugas1: null, petugas2: null });
+      const { firstDay, lastDay } = getCurrentMonthRange();
+      setTableStartDate(firstDay);
+      setTableEndDate(lastDay);
+      setTableUlpFilter('');
     } else {
       setLoginError('Password salah!');
     }
@@ -299,6 +321,10 @@ const App: React.FC = () => {
     setSession({ ulp: null, petugas1: null, petugas2: null });
     setEditingReport(null);
     setUpdatingReport(null);
+    const { firstDay, lastDay } = getCurrentMonthRange();
+    setTableStartDate(firstDay);
+    setTableEndDate(lastDay);
+    setTableUlpFilter('');
   };
 
   const handleBackToMenu = () => {
@@ -553,33 +579,191 @@ const App: React.FC = () => {
 
   if (view === 'LOGIN') {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-slate-200">
-          <div className="text-center mb-8">
-            <img src={LOGO_URL} alt="Logo PLN" className="h-16 mx-auto mb-4 object-contain" />
-            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">PLN Electricity Services</h2>
-            <h1 className="text-lg font-extrabold text-slate-800 mb-6 uppercase tracking-tight">Unit Layanan Bukittinggi</h1>
-            <img src={APP_LOGO} alt="Logo App" className="h-48 mx-auto object-contain mb-6 hover:scale-110 transition-transform" />
-            <h2 className="text-2xl font-bold text-primary mb-2 uppercase">Yandal Patrol Monitoring</h2>
-          </div>
-          <div className="space-y-4">
-            <button onClick={() => handleInitialRoleSelect(UserRole.USER)} className="w-full bg-primary hover:bg-cyan-800 text-white font-black py-4 rounded-2xl transition-all shadow-lg text-xs uppercase tracking-widest">Login Petugas</button>
-            {!showAdminLogin ? (
-              <>
-                <button onClick={() => setShowAdminLogin(true)} className="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-2xl text-xs uppercase tracking-widest">Login Admin</button>
-                <button onClick={() => handleInitialRoleSelect(UserRole.GUEST)} className="w-full bg-white border-2 border-slate-200 hover:border-primary text-slate-600 font-black py-4 rounded-2xl text-xs uppercase tracking-widest">Tampilkan Data</button>
-              </>
-            ) : (
-              <form onSubmit={handleAdminLoginSubmit} className="bg-slate-50 p-5 rounded-2xl border border-slate-200 animate-fade-in">
-                <input type="password" autoFocus className="w-full px-4 py-3 border rounded-xl mb-3 outline-none transition-all" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} placeholder="Password Admin..." />
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => setShowAdminLogin(false)} className="flex-1 py-3 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded-xl">Batal</button>
-                  <button type="submit" className="flex-1 py-3 text-xs font-black bg-slate-800 text-white rounded-xl">Masuk</button>
-                </div>
-              </form>
-            )}
-          </div>
+      <div className="min-h-screen bg-[#f3f7fd] relative overflow-hidden flex flex-col justify-between py-6 px-4 font-sans select-none">
+        
+        {/* Background Waves (Top Right) */}
+        <div className="absolute top-0 right-0 w-80 h-80 sm:w-96 sm:h-96 opacity-40 pointer-events-none z-0">
+          <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+            <path d="M100 0C60 0 20 40 0 100H100V0Z" fill="url(#blueGrad1)" />
+            <path d="M100 0C75 10 40 50 20 100H100V0Z" fill="url(#blueGrad2)" opacity="0.5" />
+            <defs>
+              <linearGradient id="blueGrad1" x1="100" y1="0" x2="0" y2="100" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#005bd4" stopOpacity="0.3" />
+                <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+              </linearGradient>
+              <linearGradient id="blueGrad2" x1="100" y1="0" x2="30" y2="100" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#003c96" stopOpacity="0.2" />
+                <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+          </svg>
         </div>
+
+        {/* Background Waves (Bottom Left & Right) */}
+        <div className="absolute bottom-0 left-0 right-0 h-48 sm:h-64 opacity-30 pointer-events-none z-0">
+          <svg viewBox="0 0 100 50" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+            <path d="M0 50C30 40 70 45 100 15V50H0Z" fill="url(#bottomGrad)" />
+            <path d="M0 50C20 30 60 35 100 5V50H0Z" fill="url(#bottomGrad)" opacity="0.4" />
+            <defs>
+              <linearGradient id="bottomGrad" x1="50" y1="50" x2="50" y2="0" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#0a59cc" />
+                <stop offset="1" stopColor="#3b82f6" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+
+        {/* Subtle Transmission Tower BG Vector Overlay */}
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.04] sm:opacity-[0.06] flex items-end justify-between px-10 pb-16">
+          <svg className="w-24 h-48 sm:w-36 sm:h-72 text-slate-800" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12,2L1,22H6L9,15H15L18,22H23L12,2ZM12,6L13.5,9H10.5L12,6ZM8,14L10,10H14L16,14H8Z" />
+          </svg>
+          <svg className="w-24 h-48 sm:w-36 sm:h-72 text-slate-800" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12,2L1,22H6L9,15H15L18,22H23L12,2ZM12,6L13.5,9H10.5L12,6ZM8,14L10,10H14L16,14H8Z" />
+          </svg>
+        </div>
+
+        {/* Content Wrapper */}
+        <div className="w-full max-w-xl mx-auto flex-1 flex flex-col justify-between z-10 relative">
+          
+          {/* Header Row */}
+          <div className="w-full flex justify-between items-center pb-4 border-b border-blue-100/50">
+            {/* Left Header - Official PLN Electricity Services Brand Image */}
+            <div className="flex items-center">
+              <img 
+                src={LOGO_URL} 
+                alt="PLN Electricity Services Logo" 
+                className="h-10 sm:h-12 w-auto object-contain" 
+              />
+            </div>
+
+            {/* Right Header */}
+            <div className="flex items-center gap-2.5">
+              <div className="text-right leading-none">
+                <span className="text-[10px] font-bold text-slate-400 tracking-wider block uppercase">Unit Layanan</span>
+                <span className="text-sm font-black text-[#004bb4] tracking-wider block uppercase">Bukittinggi</span>
+              </div>
+              <div className="w-0.5 h-7 bg-[#005bd4] rounded-full"></div>
+            </div>
+          </div>
+
+          {/* Main Shield and App Title (Standalone centered logo image to avoid double text overlay) */}
+          <div className="flex items-center justify-center my-8 sm:my-12 text-center">
+            <div className="relative">
+              <div className="absolute inset-0 bg-blue-100 rounded-full blur-3xl opacity-35 transform scale-110"></div>
+              <img 
+                src={APP_LOGO} 
+                alt="Yandal Patrol Logo" 
+                className="max-w-[280px] sm:max-w-md w-full h-auto object-contain relative hover:scale-[1.02] transition-transform duration-200" 
+              />
+            </div>
+          </div>
+
+          {/* Title and Buttons Section */}
+          <div className="w-full">
+            <div className="text-center mb-8">
+              <div className="flex items-center justify-center gap-3 mb-2">
+                <span className="h-[2px] w-6 bg-amber-400 rounded-full"></span>
+                <h3 className="text-xs sm:text-sm font-extrabold text-[#003c96] uppercase tracking-wider">
+                  Yandal Patrol Monitoring
+                </h3>
+                <span className="h-[2px] w-6 bg-amber-400 rounded-full"></span>
+              </div>
+              
+              <div className="w-16 h-1 mx-auto flex rounded-full overflow-hidden shadow-sm">
+                <div className="w-1/2 h-full bg-[#004bb4]"></div>
+                <div className="w-1/2 h-full bg-[#f1ab00]"></div>
+              </div>
+            </div>
+
+            {/* CTAs */}
+            <div className="space-y-4 max-w-sm sm:max-w-md mx-auto w-full">
+              {!showAdminLogin ? (
+                <>
+                  {/* Button 1: LOGIN PETUGAS */}
+                  <button 
+                    onClick={() => handleInitialRoleSelect(UserRole.USER)} 
+                    className="w-full bg-[#005bd4] hover:bg-[#004bb4] active:scale-[0.98] text-white py-4 px-6 rounded-2xl flex items-center justify-between shadow-[0_6px_12px_rgba(0,91,212,0.15)] hover:shadow-[0_10px_20px_rgba(0,91,212,0.25)] transition-all font-bold duration-150"
+                  >
+                    <User className="w-5 h-5 text-white" />
+                    <span className="font-extrabold text-xs sm:text-sm tracking-widest uppercase flex-1 text-center">
+                      Login Petugas
+                    </span>
+                    <ChevronRight className="w-5 h-5 text-white opacity-80" />
+                  </button>
+
+                  {/* Button 2: LOGIN ADMIN */}
+                  <button 
+                    onClick={() => setShowAdminLogin(true)} 
+                    className="w-full bg-[#1e2e4a] hover:bg-[#121f33] active:scale-[0.98] text-white py-4 px-6 rounded-2xl flex items-center justify-between shadow-md hover:shadow-lg transition-all font-bold duration-150"
+                  >
+                    <ShieldCheck className="w-5 h-5 text-white" />
+                    <span className="font-extrabold text-xs sm:text-sm tracking-widest uppercase flex-1 text-center">
+                      Login Admin
+                    </span>
+                    <ChevronRight className="w-5 h-5 text-white opacity-80" />
+                  </button>
+
+                  {/* Button 3: TAMPILKAN DATA */}
+                  <button 
+                    onClick={() => handleInitialRoleSelect(UserRole.GUEST)} 
+                    className="w-full bg-white border border-slate-200 hover:border-[#005bd4]/40 hover:bg-slate-50 active:scale-[0.98] text-[#005bd4] py-4 px-6 rounded-2xl flex items-center justify-between shadow-sm hover:shadow-md transition-all font-bold duration-150"
+                  >
+                    <BarChart3 className="w-5 h-5 text-[#005bd4]" />
+                    <span className="font-extrabold text-xs sm:text-sm tracking-widest uppercase flex-1 text-center">
+                      Tampilkan Data
+                    </span>
+                    <ChevronRight className="w-5 h-5 text-[#005bd4]" />
+                  </button>
+                </>
+              ) : (
+                /* Admin Pass form inside identical dimensions */
+                <form 
+                  onSubmit={handleAdminLoginSubmit} 
+                  className="bg-white p-6 rounded-2xl border border-blue-50/70 shadow-lg animate-fade-in w-full"
+                >
+                  <div className="flex items-center gap-2.5 mb-4 text-[#1e2e4a]">
+                    <Lock className="w-4 h-4" />
+                    <span className="text-xs font-black uppercase tracking-wider">Otorisasi Admin</span>
+                  </div>
+                  <input 
+                    type="password" 
+                    autoFocus 
+                    className="w-full px-4 py-3.5 border border-slate-200 rounded-xl mb-2 outline-none transition-all focus:border-[#005bd4] focus:ring-2 focus:ring-[#005bd4]/10 text-slate-800" 
+                    value={adminPassword} 
+                    onChange={(e) => setAdminPassword(e.target.value)} 
+                    placeholder="Masukkan sandi khusus admin..." 
+                  />
+                  {loginError ? (
+                    <p className="text-[11px] text-red-600 font-bold mb-3 animate-pulse">{loginError}</p>
+                  ) : null}
+                  <div className="flex gap-2">
+                    <button 
+                      type="button" 
+                      onClick={() => { setShowAdminLogin(false); setLoginError(''); setAdminPassword(''); }} 
+                      className="flex-1 py-3 text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors duration-150"
+                    >
+                      Batal
+                    </button>
+                    <button 
+                      type="submit" 
+                      className="flex-1 py-3 text-xs font-black bg-[#1e2e4a] hover:bg-[#152238] text-white rounded-xl shadow-md transition-colors duration-150"
+                    >
+                      Masuk
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+
+          {/* Footer Branding Credit */}
+          <div className="text-center pt-8 text-[10px] text-slate-400 font-medium">
+            <span className="opacity-80">© {new Date().getFullYear()} PLN UP3 Bukittinggi — Yandal Patrol V{APP_VERSION}</span>
+          </div>
+
+        </div>
+
       </div>
     );
   }
@@ -597,43 +781,75 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <header className="bg-white shadow-sm z-20 sticky top-0">
+      <header className="bg-[#0f1d36] text-white shadow-xl z-20 sticky top-0 border-b border-[#1b2b48]">
         <div className="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
             <div className="flex items-center gap-4">
-               <button onClick={handleBackToMenu} className="p-2 hover:bg-slate-100 rounded-full transition-all text-slate-600 group flex items-center gap-1">
-                 <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+               <button onClick={handleBackToMenu} className="p-2 hover:bg-white/10 text-slate-300 hover:text-white rounded-xl transition-all group flex items-center gap-2">
+                 <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                  <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">Kembali</span>
                </button>
-               <div className="w-px h-8 bg-slate-200"></div>
+               <div className="w-px h-8 bg-white/20"></div>
                <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('ABOUT')}>
-                 <img src={APP_LOGO} alt="App" className="h-8 object-contain" />
-                 <div className="flex flex-col leading-none">
-                   <span className="font-black text-sm text-slate-800 tracking-tight">Yandal Patrol</span>
-                   <span className="text-[9px] text-primary font-black uppercase tracking-widest">{session.ulp || 'UP3 BUKITTINGGI'}</span>
-                 </div>
+                 <img src={APP_LOGO} alt="App" className="h-8 object-contain brightness-110 drop-shadow-[0_0_8px_rgba(241,171,0,0.85)] hover:drop-shadow-[0_0_12px_rgba(241,171,0,1)] hover:scale-105 transition-all duration-200" />
                </div>
             </div>
-            <button onClick={handleLogout} className="text-[10px] text-red-600 font-black px-4 py-2 rounded-xl hover:bg-red-50 uppercase tracking-widest">Logout</button>
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col leading-none text-right">
+                <span className="font-extrabold text-sm text-white tracking-tight">Yandal Patrol</span>
+                <span className="text-[9px] text-[#f1ab00] font-black uppercase tracking-widest mt-0.5">{session.ulp || 'UP3 BUKITTINGGI'}</span>
+              </div>
+              <div className="w-px h-8 bg-white/20 block"></div>
+              <button onClick={handleLogout} className="text-[10px] text-white bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 hover:border-red-500 font-extrabold px-3 py-2 rounded-xl transition-all uppercase tracking-widest flex items-center gap-1.5">
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Logout</span>
+              </button>
+            </div>
         </div>
-        <div className="max-w-7xl mx-auto px-4">
-          <nav className="-mb-px flex space-x-8 overflow-x-auto no-scrollbar">
-            {role === UserRole.ADMIN && (
-              <>
-                <button onClick={() => setView('DASHBOARD')} className={`pb-4 px-1 border-b-4 font-black text-[10px] uppercase tracking-widest whitespace-nowrap ${view === 'DASHBOARD' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Dashboard</button>
-                <button onClick={() => setView('REKAP')} className={`pb-4 px-1 border-b-4 font-black text-[10px] uppercase tracking-widest whitespace-nowrap ${view === 'REKAP' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Rekap Petugas</button>
-                <button onClick={() => setView('BACKUP')} className={`pb-4 px-1 border-b-4 font-black text-[10px] uppercase tracking-widest whitespace-nowrap ${view === 'BACKUP' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>File BackUp</button>
-                <button onClick={() => setView('SETTINGS')} className={`pb-4 px-1 border-b-4 font-black text-[10px] uppercase tracking-widest whitespace-nowrap ${view === 'SETTINGS' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Kelola Data</button>
-              </>
-            )}
-            {role === UserRole.USER && (
-              <>
-                <button onClick={() => setView('INPUT')} className={`pb-4 px-1 border-b-4 font-black text-[10px] uppercase tracking-widest whitespace-nowrap ${view === 'INPUT' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Input Data</button>
-                <button onClick={() => setView('UPDATE_LIST')} className={`pb-4 px-1 border-b-4 font-black text-[10px] uppercase tracking-widest whitespace-nowrap ${view === 'UPDATE_LIST' || view === 'UPDATE_FORM' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Update Data</button>
-              </>
-            )}
-            <button onClick={() => setView('TABLE')} className={`pb-4 px-1 border-b-4 font-black text-[10px] uppercase tracking-widest whitespace-nowrap ${view === 'TABLE' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Data Laporan</button>
-            <button onClick={() => setView('ABOUT')} className={`pb-4 px-1 border-b-4 font-black text-[10px] uppercase tracking-widest whitespace-nowrap ${view === 'ABOUT' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Tentang</button>
-          </nav>
+        <div className="bg-[#172b4d] border-t border-white/5 py-2.5">
+          <div className="max-w-7xl mx-auto px-4">
+            <nav className="flex space-x-2 overflow-x-auto no-scrollbar scroll-smooth">
+              {role === UserRole.ADMIN && (
+                <>
+                  <button onClick={() => setView('DASHBOARD')} className={`px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider whitespace-nowrap transition-all duration-150 flex items-center gap-2 ${view === 'DASHBOARD' ? 'bg-[#f1ab00] text-[#0f1d36] shadow-md font-black scale-102' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>
+                    <LayoutDashboard className="w-3.5 h-3.5" />
+                    Dashboard
+                  </button>
+                  <button onClick={() => setView('REKAP')} className={`px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider whitespace-nowrap transition-all duration-150 flex items-center gap-2 ${view === 'REKAP' ? 'bg-[#f1ab00] text-[#0f1d36] shadow-md font-black scale-102' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>
+                    <ClipboardList className="w-3.5 h-3.5" />
+                    Rekap Petugas
+                  </button>
+                  <button onClick={() => setView('BACKUP')} className={`px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider whitespace-nowrap transition-all duration-150 flex items-center gap-2 ${view === 'BACKUP' ? 'bg-[#f1ab00] text-[#0f1d36] shadow-md font-black scale-102' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>
+                    <Database className="w-3.5 h-3.5" />
+                    File BackUp
+                  </button>
+                  <button onClick={() => setView('SETTINGS')} className={`px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider whitespace-nowrap transition-all duration-150 flex items-center gap-2 ${view === 'SETTINGS' ? 'bg-[#f1ab00] text-[#0f1d36] shadow-md font-black scale-102' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>
+                    <Sliders className="w-3.5 h-3.5" />
+                    Kelola Data
+                  </button>
+                </>
+              )}
+              {role === UserRole.USER && (
+                <>
+                  <button onClick={() => setView('INPUT')} className={`px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider whitespace-nowrap transition-all duration-150 flex items-center gap-2 ${view === 'INPUT' ? 'bg-[#f1ab00] text-[#0f1d36] shadow-md font-black scale-102' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>
+                    <Plus className="w-3.5 h-3.5" />
+                    Input Data
+                  </button>
+                  <button onClick={() => setView('UPDATE_LIST')} className={`px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider whitespace-nowrap transition-all duration-150 flex items-center gap-2 ${view === 'UPDATE_LIST' || view === 'UPDATE_FORM' ? 'bg-[#f1ab00] text-[#0f1d36] shadow-md font-black scale-102' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    Update Data
+                  </button>
+                </>
+              )}
+              <button onClick={() => setView('TABLE')} className={`px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider whitespace-nowrap transition-all duration-150 flex items-center gap-2 ${view === 'TABLE' ? 'bg-[#f1ab00] text-[#0f1d36] shadow-md font-black scale-102' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>
+                <FileText className="w-3.5 h-3.5" />
+                Data Laporan
+              </button>
+              <button onClick={() => setView('ABOUT')} className={`px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider whitespace-nowrap transition-all duration-150 flex items-center gap-2 ${view === 'ABOUT' ? 'bg-[#f1ab00] text-[#0f1d36] shadow-md font-black scale-102' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>
+                <Info className="w-3.5 h-3.5" />
+                Tentang
+              </button>
+            </nav>
+          </div>
         </div>
       </header>
 
