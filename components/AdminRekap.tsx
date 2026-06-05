@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
+import { Download } from 'lucide-react';
 import { ReportData, ULPData, ULPName } from '../types';
 
 interface AdminRekapProps {
@@ -72,13 +73,159 @@ export const AdminRekap: React.FC<AdminRekapProps> = ({ reports, masterData }) =
     }));
   }, [reports, masterData, startDate, endDate, filterUlp]);
 
+  const handleExportExcel = async () => {
+    const ExcelJS = (window as any).ExcelJS;
+    if (!ExcelJS) return alert("Library ExcelJS tidak tersedia.");
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Rekap Realisasi Petugas');
+
+      const columns = [
+        { header: 'No. Urut', key: 'no', width: 10 },
+        { header: 'Bulan / Periode', key: 'bulan', width: 20 },
+        { header: 'Nama Petugas', key: 'nama', width: 30 },
+        { header: 'Unit Kerja (ULP)', key: 'ulp', width: 25 },
+        { header: 'Total Realisasi', key: 'total', width: 18 }
+      ];
+
+      // Set column keys and widths
+      columns.forEach((col, idx) => {
+        const column = worksheet.getColumn(idx + 1);
+        column.key = col.key;
+        column.width = col.width;
+      });
+
+      // Headers Title blocks
+      // Row 1: REKAP REALISASI PETUGAS YANDAL PATROL
+      worksheet.mergeCells('A1:E1');
+      const title1 = worksheet.getCell('A1');
+      title1.value = 'REKAP REALISASI PETUGAS YANDAL PATROL';
+      title1.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FF0F172A' } };
+      title1.alignment = { horizontal: 'center', vertical: 'middle' };
+
+      // Row 2: UP3 BUKITTINGGI
+      worksheet.mergeCells('A2:E2');
+      const title2 = worksheet.getCell('A2');
+      title2.value = 'UP3 BUKITTINGGI';
+      title2.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FF334155' } };
+      title2.alignment = { horizontal: 'center', vertical: 'middle' };
+
+      // Row 3: Periode/Tanggal atau ULP Filter info
+      worksheet.mergeCells('A3:E3');
+      const title3 = worksheet.getCell('A3');
+      const startText = startDate ? new Date(startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+      const endText = endDate ? new Date(endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+      const filterUlpText = filterUlp ? filterUlp.toUpperCase() : 'SEMUA ULP';
+      
+      let subtitleText = '';
+      if (startText && endText) {
+        subtitleText = `PERIODE: ${startText.toUpperCase()} S.D. ${endText.toUpperCase()} | ULP: ${filterUlpText}`;
+      } else if (startText) {
+        subtitleText = `PERIODE: SEJAK ${startText.toUpperCase()} | ULP: ${filterUlpText}`;
+      } else if (endText) {
+        subtitleText = `PERIODE: SAMPAI ${endText.toUpperCase()} | ULP: ${filterUlpText}`;
+      } else {
+        subtitleText = `PERIODE: SEMUA PERIODE | ULP: ${filterUlpText}`;
+      }
+      title3.value = subtitleText;
+      title3.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF475569' } };
+      title3.alignment = { horizontal: 'center', vertical: 'middle' };
+
+      // Set Heights
+      worksheet.getRow(1).height = 25;
+      worksheet.getRow(2).height = 20;
+      worksheet.getRow(3).height = 20;
+      worksheet.getRow(4).height = 10; // Spacing
+
+      // Write Table Headers in Row 5
+      const headerRow = worksheet.getRow(5);
+      headerRow.values = columns.map(c => c.header);
+      headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0E7490' } }; // cyan-700
+      headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+      headerRow.height = 25;
+
+      // Write Data Rows
+      rekapData.forEach((item: any, idx: number) => {
+        const rowIndex = idx + 6;
+        const currentRow = worksheet.getRow(rowIndex);
+        currentRow.values = [
+          item.no,
+          item.bulan,
+          item.nama,
+          item.ulp,
+          item.total
+        ];
+
+        // Alignment
+        currentRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
+        currentRow.getCell(2).alignment = { vertical: 'middle', horizontal: 'center' };
+        currentRow.getCell(3).alignment = { vertical: 'middle', horizontal: 'left' };
+        currentRow.getCell(4).alignment = { vertical: 'middle', horizontal: 'left' };
+        currentRow.getCell(5).alignment = { vertical: 'middle', horizontal: 'center' };
+
+        // Top rank highlighting
+        if (item.no <= 6 && item.total > 0) {
+          currentRow.eachCell((cell) => {
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFFDF9C4' } // Light gold
+            };
+          });
+        }
+        
+        currentRow.height = 20;
+      });
+
+      // Borders
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber >= 5) {
+          row.eachCell((cell) => {
+            cell.border = {
+              top: { style: 'thin' },
+              left: { style: 'thin' },
+              bottom: { style: 'thin' },
+              right: { style: 'thin' }
+            };
+          });
+        }
+      });
+
+      // Write and download
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      const fileDate = new Date().toISOString().split('T')[0];
+      a.download = `Rekap_Realisasi_Petugas_${fileDate}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Gagal mengekspor Excel:", err);
+      alert("Terjadi kesalahan saat mengekspor data ke Excel.");
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
           <h2 className="text-xl font-bold text-slate-800">Rekap Realisasi Petugas</h2>
-          <div className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-bold border border-blue-100">
-            Urutan: Realisasi Terbanyak
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportExcel}
+              className="px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold border border-green-500 transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+            >
+              <Download className="w-4 h-4" />
+              <span>Export Excel</span>
+            </button>
+            <div className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-bold border border-blue-100">
+              Urutan: Realisasi Terbanyak
+            </div>
           </div>
         </div>
         
