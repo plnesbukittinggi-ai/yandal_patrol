@@ -18,8 +18,12 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
   const [keypoint, setKeypoint] = useState(editData?.keypoint || '');
   const [titikStart, setTitikStart] = useState(editData?.titikStart || '');
   const [titikFinish, setTitikFinish] = useState(editData?.titikFinish || '');
+  const [jumlahTiang, setJumlahTiang] = useState<string>(editData?.jumlahTiang !== undefined && editData?.jumlahTiang !== null ? String(editData.jumlahTiang) : '');
+  const [jumlahKms, setJumlahKms] = useState<string>(editData?.jumlahKms !== undefined && editData?.jumlahKms !== null ? String(editData.jumlahKms) : '');
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingReportData, setPendingReportData] = useState<ReportData | null>(null);
   
   const [photosSebelum, setPhotosSebelum] = useState<(string | null)[]>(() => {
     if (editData?.photos?.sebelum) {
@@ -97,6 +101,19 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
     }
   };
 
+  const executeSubmit = async (report: ReportData) => {
+    setIsSubmitting(true);
+    const isEditMode = !!editData;
+    try {
+        await onSubmit(report, isEditMode);
+    } catch (error) {
+        console.error("Submission error:", error);
+        alert("Terjadi kesalahan saat menyimpan data.");
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -104,19 +121,9 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
         alert("Unit (ULP) tidak terdeteksi. Silakan login ulang.");
         return;
     }
-    
-    setIsSubmitting(true);
-    const isEditMode = !!editData;
 
     const countSebelum = photosSebelum.filter(p => p !== null && p !== '').length;
     const countSesudah = photosSesudah.filter(p => p !== null && p !== '').length;
-
-    if (countSebelum < 6 || countSesudah < 6) {
-      if (!window.confirm(`FOTO YANG ADA INPUT : ${countSebelum} Sebelum dan ${countSesudah} Sesudah, Apakah Anda Yakin?`)) {
-        setIsSubmitting(false);
-        return;
-      }
-    }
 
     const now = new Date();
 
@@ -132,18 +139,19 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
       keypoint,
       titikStart,
       titikFinish,
+      jumlahTiang: (jumlahTiang !== '' && !isNaN(Number(jumlahTiang))) ? Number(jumlahTiang) : undefined,
+      jumlahKms: (jumlahKms !== '' && !isNaN(Number(jumlahKms))) ? Number(jumlahKms) : undefined,
       photos: {
         sebelum: photosSebelum,
         sesudah: photosSesudah
       }
     };
 
-    try {
-        await onSubmit(newReport, isEditMode);
-    } catch (error) {
-        console.error("Submission error:", error);
-        alert("Terjadi kesalahan saat menyimpan data.");
-        setIsSubmitting(false);
+    if (countSebelum < 6 || countSesudah < 6) {
+      setPendingReportData(newReport);
+      setShowConfirmModal(true);
+    } else {
+      await executeSubmit(newReport);
     }
   };
 
@@ -203,17 +211,15 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
              <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Nama Keypoint</label>
              <div className="relative">
                 <select 
-                  required
+                  required={availableKeypoints.length > 0}
                   disabled={!penyulang}
                   className={`w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary/10 outline-none font-bold text-sm bg-white transition-all ${!penyulang ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'cursor-pointer'}`}
                   value={keypoint}
                   onChange={(e) => setKeypoint(e.target.value)}
                 >
-                  <option value="">{penyulang ? `-- Pilih Keypoint untuk ${penyulang} --` : '-- Pilih Penyulang Dahulu --'}</option>
+                  <option value="">{penyulang ? (availableKeypoints.length > 0 ? `-- Pilih Keypoint untuk ${penyulang} --` : '-- Tidak ada Keypoint --') : '-- Pilih Penyulang Dahulu --'}</option>
                   {availableKeypoints.length > 0 ? (
                     availableKeypoints.map(kp => <option key={kp} value={kp}>{kp}</option>)
-                  ) : penyulang ? (
-                    <option value="" disabled>Belum ada data Keypoint</option>
                   ) : null}
                 </select>
                 {!availableKeypoints.length && penyulang && (
@@ -248,6 +254,32 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
               placeholder="LOKASI SELESAI PATROL"
               value={titikFinish}
               onChange={(e) => setTitikFinish(e.target.value)}
+            />
+          </div>
+
+          <div>
+             <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Jumlah Tiang</label>
+             <input 
+              type="number" 
+              min="0"
+              step="1"
+              className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary/10 outline-none font-bold text-sm transition-all"
+              placeholder="JUMLAH TIANG YANG DIPATROL"
+              value={jumlahTiang}
+              onChange={(e) => setJumlahTiang(e.target.value)}
+            />
+          </div>
+
+          <div>
+             <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Jumlah KMS</label>
+             <input 
+              type="number" 
+              min="0"
+              step="any"
+              className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary/10 outline-none font-bold text-sm transition-all"
+              placeholder="PANJANG KMS YANG DIPATROL"
+              value={jumlahKms}
+              onChange={(e) => setJumlahKms(e.target.value)}
             />
           </div>
         </div>
@@ -310,6 +342,48 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
           </button>
         </div>
       </form>
+
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 transition-all transform scale-100">
+            <div className="w-12 h-12 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center mb-4">
+              <svg className="w-6 h-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="text-base font-black text-slate-800 uppercase tracking-tight mb-2">Konfirmasi Simpan Laporan</h3>
+            <p className="text-xs text-slate-500 leading-relaxed font-bold mb-6">
+              Foto yang di-input baru: <span className="text-primary font-black">{photosSebelum.filter(p => p !== null && p !== '').length} Sebelum</span> dan <span className="text-primary font-black">{photosSesudah.filter(p => p !== null && p !== '').length} Sesudah</span>.
+              <br /><br />
+              Apakah Anda yakin ingin menyimpan laporan ini meskipun foto kurang dari 6 pasang?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowConfirmModal(false);
+                  setPendingReportData(null);
+                }}
+                className="px-4 py-2.5 rounded-xl text-xs font-black text-slate-500 hover:text-slate-700 hover:bg-slate-50 uppercase tracking-wider transition-all"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setShowConfirmModal(false);
+                  if (pendingReportData) {
+                    await executeSubmit(pendingReportData);
+                  }
+                }}
+                className="px-5 py-2.5 rounded-xl text-xs font-black bg-primary text-white hover:bg-cyan-800 shadow-lg shadow-cyan-100 uppercase tracking-wider transition-all"
+              >
+                Ya, Simpan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
