@@ -21,6 +21,8 @@ export const UpdatePhotoForm: React.FC<UpdatePhotoFormProps> = ({ report, onSubm
     return arr.slice(0, 10);
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingReportData, setPendingReportData] = useState<ReportData | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const formatImageUrl = (url: any): string => {
@@ -86,19 +88,23 @@ export const UpdatePhotoForm: React.FC<UpdatePhotoFormProps> = ({ report, onSubm
     }
   };
 
+  const executeSubmit = async (updatedReport: ReportData) => {
+    setIsSubmitting(true);
+    try {
+      // Mengirimkan data dengan isEdit = true agar backend mengeksekusi logika 'updateReport'
+      await onSubmit(updatedReport, true);
+    } catch (error) {
+      alert("Gagal update. Periksa koneksi internet.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
 
     const countSebelum = photosSebelum.filter(p => p !== null && p !== '').length;
     const countSesudah = photosSesudah.filter(p => p !== null && p !== '').length;
-
-    if (countSebelum < 6 || countSesudah < 6) {
-      if (!window.confirm(`FOTO YANG ADA INPUT : ${countSebelum} Sebelum dan ${countSesudah} Sesudah, Apakah Anda Yakin?`)) {
-        setIsSubmitting(false);
-        return;
-      }
-    }
 
     // Sanitasi data: Pastikan tidak ada null yang terkirim
     const cleanSebelum = photosSebelum.map(p => (p === null || p === undefined) ? "" : p);
@@ -114,12 +120,11 @@ export const UpdatePhotoForm: React.FC<UpdatePhotoFormProps> = ({ report, onSubm
       }
     };
 
-    try {
-      // Mengirimkan data dengan isEdit = true agar backend mengeksekusi logika 'updateReport'
-      await onSubmit(updatedReport, true);
-    } catch (error) {
-      alert("Gagal update. Periksa koneksi internet.");
-      setIsSubmitting(false);
+    if (countSebelum < 6 || countSesudah < 6) {
+      setPendingReportData(updatedReport);
+      setShowConfirmModal(true);
+    } else {
+      await executeSubmit(updatedReport);
     }
   };
 
@@ -268,15 +273,57 @@ export const UpdatePhotoForm: React.FC<UpdatePhotoFormProps> = ({ report, onSubm
         >
           <div className="relative w-full max-w-md">
             <img 
-              src={previewImage} 
-              alt="Preview" 
-              className="w-full h-auto aspect-square object-contain bg-black rounded-3xl shadow-2xl border-4 border-white/10" 
-              referrerPolicy="no-referrer" 
+               src={previewImage} 
+               alt="Preview" 
+               className="w-full h-auto aspect-square object-contain bg-black rounded-3xl shadow-2xl border-4 border-white/10" 
+               referrerPolicy="no-referrer" 
             />
           </div>
           <p className="text-white text-[10px] mt-6 font-black uppercase tracking-widest animate-pulse">
             Ketuk di mana saja untuk kembali
           </p>
+        </div>
+      )}
+
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 transition-all transform scale-100">
+            <div className="w-12 h-12 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center mb-4">
+              <svg className="w-6 h-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="text-base font-black text-slate-800 uppercase tracking-tight mb-2">Konfirmasi Update Laporan</h3>
+            <p className="text-xs text-slate-500 leading-relaxed font-bold mb-6">
+              Foto yang di-input baru: <span className="text-primary font-black">{photosSebelum.filter(p => p !== null && p !== '').length} Sebelum</span> dan <span className="text-primary font-black">{photosSesudah.filter(p => p !== null && p !== '').length} Sesudah</span>.
+              <br /><br />
+              Apakah Anda yakin ingin menyimpan perubahan laporan ini meskipun foto kurang dari 6 pasang?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowConfirmModal(false);
+                  setPendingReportData(null);
+                }}
+                className="px-4 py-2.5 rounded-xl text-xs font-black text-slate-500 hover:text-slate-700 hover:bg-slate-50 uppercase tracking-wider transition-all"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setShowConfirmModal(false);
+                  if (pendingReportData) {
+                    await executeSubmit(pendingReportData);
+                  }
+                }}
+                className="px-5 py-2.5 rounded-xl text-xs font-black bg-primary text-white hover:bg-cyan-800 shadow-lg shadow-cyan-100 uppercase tracking-wider transition-all"
+              >
+                Ya, Simpan
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
