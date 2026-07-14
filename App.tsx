@@ -15,7 +15,8 @@ import {
   Info,
   Plus,
   ArrowLeft,
-  LogOut
+  LogOut,
+  Milestone
 } from 'lucide-react';
 import { UserRole, ViewState, ReportData, ULPName, ULPData, LoginSession, DriveFile } from './types';
 import { InputForm } from './components/InputForm';
@@ -23,6 +24,7 @@ import { Dashboard } from './components/Dashboard';
 import { DataTable } from './components/DataTable';
 import { AdminSettings } from './components/AdminSettings';
 import { AdminRekap } from './components/AdminRekap';
+import { AdminRekapTiangKms } from './components/AdminRekapTiangKms';
 import { FileBackup } from './components/FileBackup';
 import { LoginConfig } from './components/LoginConfig';
 import { UpdateList } from './components/UpdateList';
@@ -440,6 +442,8 @@ const App: React.FC = () => {
         { header: 'Keypoint', key: 'keypoint', width: 22 },
         { header: 'Titik Start', key: 'start', width: 25 },
         { header: 'Titik Finish', key: 'finish', width: 25 },
+        { header: 'Jumlah Tiang', key: 'jumlahTiang', width: 15 },
+        { header: 'Jumlah KMS', key: 'jumlahKms', width: 15 },
         ...Array(10).fill(0).flatMap((_, i) => [
           { header: `Foto Sblm ${i+1}`, key: `sblm${i+1}`, width: 25 },
           { header: `Foto Ssdh ${i+1}`, key: `ssdh${i+1}`, width: 25 }
@@ -455,14 +459,14 @@ const App: React.FC = () => {
 
       // Write Custom Top Header Title blocks
       // Baris 1: REKAP PELAKSANAAN PEKERJAAN YANDAL PATROL
-      worksheet.mergeCells('A1:J1');
+      worksheet.mergeCells('A1:L1');
       const title1 = worksheet.getCell('A1');
       title1.value = 'REKAP PELAKSANAAN PEKERJAAN YANDAL PATROL';
       title1.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FF0F172A' } };
       title1.alignment = { horizontal: 'center', vertical: 'middle' };
 
       // Baris 2: ULP <ULP FILTER> UP3 BUKITTINGGI
-      worksheet.mergeCells('A2:J2');
+      worksheet.mergeCells('A2:L2');
       const title2 = worksheet.getCell('A2');
       const filterUlpText = tableUlpFilter ? tableUlpFilter.toUpperCase() : 'SEMUA ULP';
       title2.value = `${filterUlpText} UP3 BUKITTINGGI`;
@@ -470,7 +474,7 @@ const App: React.FC = () => {
       title2.alignment = { horizontal: 'center', vertical: 'middle' };
 
       // Baris 3: DARI TANGGAL <tanggal awal filter> SAMPAI <Tanggal akhir Filter>
-      worksheet.mergeCells('A3:J3');
+      worksheet.mergeCells('A3:L3');
       const title3 = worksheet.getCell('A3');
       const startDateFormatted = tableStartDate ? new Date(tableStartDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-';
       const endDateFormatted = tableEndDate ? new Date(tableEndDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-';
@@ -589,16 +593,18 @@ const App: React.FC = () => {
           r.keypoint || '',
           r.titikStart || '',
           r.titikFinish || '',
+          r.jumlahTiang !== undefined && r.jumlahTiang !== null ? Number(r.jumlahTiang) : '',
+          r.jumlahKms !== undefined && r.jumlahKms !== null ? Number(r.jumlahKms) : '',
           ...photoFormulas
         ];
         currentRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
 
-        // Collect download tasks with interleaved columns
+        // Collect download tasks with interleaved columns (shifted by 2 because of tiang and kms columns)
         sblmList.forEach((url, idx) => {
-          if (url) downloadTasks.push({ rowIndex, colIndex: 11 + (2 * idx), url });
+          if (url) downloadTasks.push({ rowIndex, colIndex: 13 + (2 * idx), url });
         });
         ssdhList.forEach((url, idx) => {
-          if (url) downloadTasks.push({ rowIndex, colIndex: 12 + (2 * idx), url });
+          if (url) downloadTasks.push({ rowIndex, colIndex: 14 + (2 * idx), url });
         });
       }
 
@@ -905,6 +911,10 @@ const App: React.FC = () => {
                     <ClipboardList className="w-3.5 h-3.5" />
                     Rekap Petugas
                   </button>
+                  <button onClick={() => setView('REKAP_TIANG_KMS')} className={`px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider whitespace-nowrap transition-all duration-150 flex items-center gap-2 ${view === 'REKAP_TIANG_KMS' ? 'bg-[#f1ab00] text-[#0f1d36] shadow-md font-black scale-102' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>
+                    <Milestone className="w-3.5 h-3.5" />
+                    Rekap Tiang & KMS
+                  </button>
                   <button onClick={() => setView('BACKUP')} className={`px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider whitespace-nowrap transition-all duration-150 flex items-center gap-2 ${view === 'BACKUP' ? 'bg-[#f1ab00] text-[#0f1d36] shadow-md font-black scale-102' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>
                     <Database className="w-3.5 h-3.5" />
                     File BackUp
@@ -943,6 +953,7 @@ const App: React.FC = () => {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-8">
         {view === 'DASHBOARD' && <Dashboard reports={filteredReportsForTable.filter(r => !session.ulp || r.ulp === session.ulp)} />}
         {view === 'REKAP' && role === UserRole.ADMIN && <AdminRekap reports={reports} masterData={masterData} />}
+        {view === 'REKAP_TIANG_KMS' && role === UserRole.ADMIN && <AdminRekapTiangKms reports={reports} />}
         {view === 'BACKUP' && role === UserRole.ADMIN && (
           <FileBackup 
             files={backupFiles} 
