@@ -97,18 +97,32 @@ export const api = {
     try {
       const action = isEdit ? 'updateReport' : 'saveReport';
       
+      // Enrich report with different key casing/formats for Jumlah Tiang & Jumlah KMS
+      // to ensure compatibility with Google Apps Script mapping logic.
+      const enrichedData = {
+        ...report,
+        "JUMLAH TIANG": report.jumlahTiang,
+        "JUMLAH KMS": report.jumlahKms,
+        "Jumlah Tiang": report.jumlahTiang,
+        "Jumlah KMS": report.jumlahKms,
+        "jumlah_tiang": report.jumlahTiang,
+        "jumlah_kms": report.jumlahKms,
+        "jumlahTiang": report.jumlahTiang,
+        "jumlahKms": report.jumlahKms,
+      };
+
       const payload = JSON.stringify({
         action: action,
-        data: report
+        data: enrichedData
       });
 
       const urlWithAction = `${GOOGLE_SCRIPT_URL}?action=${action}`;
 
-      // Menggunakan mode: 'cors' dengan 'text/plain' agar bisa mendeteksi status sukses/gagal
-      // tanpa memicu preflight OPTIONS request yang tidak didukung GAS.
+      // Menggunakan mode: 'no-cors' dengan 'text/plain' agar bisa mengirim data ke GAS
+      // tanpa memicu masalah CORS akibat redirect 302 dari Google Apps Script.
       const response = await fetch(urlWithAction, {
         method: 'POST',
-        mode: 'cors',
+        mode: 'no-cors',
         headers: { 
           'Content-Type': 'text/plain' 
         },
