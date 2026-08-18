@@ -1,6 +1,6 @@
 {
-  "name": "PLN ES Bukittinggi Yandal Patrol",
-  "description": "A comprehensive monitoring application for special assignments (Penugasan Khusus) featuring role-based access, dependent data inputs, photo evidence collection, and analytical dashboards.",
+  "name": "PLN ES Bukittinggi PEXASUS",
+  "description": "A comprehensive monitoring application for special assignments (Penugasan Khusus / PEXASUS) featuring role-based access, dependent data inputs, photo evidence collection, and analytical dashboards.",
   "requestFramePermissions": [
     "camera"
   ]
