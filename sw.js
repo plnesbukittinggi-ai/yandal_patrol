@@ -1,4 +1,4 @@
-const CACHE_NAME = 'yandal-patrol-v1.9.5';
+const CACHE_NAME = 'pexasus-v1.9.5';
 const ASSETS = [
   '/',
   '/index.html',
