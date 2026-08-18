@@ -1,11 +1,10 @@
-
 {
-  "name": "Yandal Patrol PLN",
-  "short_name": "Yandal Patrol",
-  "description": "Monitoring Yandal Patrol PLN ES Bukittinggi",
+  "name": "PEXASUS",
+  "short_name": "PEXASUS",
+  "description": "Aplikasi PEXASUS Monitoring UL Bukittinggi",
   "start_url": "/",
   "display": "standalone",
- "background_color": "#0f1d36",
+  "background_color": "#0f1d36",
   "theme_color": "#0f1d36",
   "orientation": "portrait-primary",
   "categories": ["productivity", "utilities"],
