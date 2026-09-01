@@ -122,6 +122,36 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
         return;
     }
 
+    if (!noPenugasan.trim()) {
+        alert("No Penugasan Khusus wajib diisi dan tidak boleh kosong.");
+        return;
+    }
+
+    if (!penyulang) {
+        alert("Nama Penyulang wajib dipilih.");
+        return;
+    }
+
+    if (!titikStart.trim()) {
+        alert("Titik Start wajib diisi dan tidak boleh kosong.");
+        return;
+    }
+
+    if (!titikFinish.trim()) {
+        alert("Titik Finish wajib diisi dan tidak boleh kosong.");
+        return;
+    }
+
+    if (jumlahTiang === '' || jumlahTiang.trim() === '' || isNaN(Number(jumlahTiang)) || Number(jumlahTiang) < 0) {
+        alert("Jumlah Tiang wajib diisi dan tidak boleh kosong (minimal 0).");
+        return;
+    }
+
+    if (jumlahKms === '' || jumlahKms.trim() === '' || isNaN(Number(jumlahKms)) || Number(jumlahKms) < 0) {
+        alert("Jumlah KMS wajib diisi dan tidak boleh kosong (minimal 0).");
+        return;
+    }
+
     const countSebelum = photosSebelum.filter(p => p !== null && p !== '').length;
     const countSesudah = photosSesudah.filter(p => p !== null && p !== '').length;
 
@@ -131,16 +161,16 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
       id: editData?.id || crypto.randomUUID(),
       timestamp: now.toISOString(),
       bulan: MONTHS[now.getMonth()],
-      noPenugasan,
+      noPenugasan: noPenugasan.trim(),
       ulp: currentUlp,
       petugas1: sessionData.petugas1 || editData?.petugas1 || 'N/A',
       petugas2: sessionData.petugas2 || editData?.petugas2 || 'N/A',
       penyulang,
       keypoint,
-      titikStart,
-      titikFinish,
-      jumlahTiang: (jumlahTiang !== '' && !isNaN(Number(jumlahTiang))) ? Number(jumlahTiang) : undefined,
-      jumlahKms: (jumlahKms !== '' && !isNaN(Number(jumlahKms))) ? Number(jumlahKms) : undefined,
+      titikStart: titikStart.trim(),
+      titikFinish: titikFinish.trim(),
+      jumlahTiang: Number(jumlahTiang),
+      jumlahKms: Number(jumlahKms),
       photos: {
         sebelum: photosSebelum,
         sesudah: photosSesudah
@@ -183,7 +213,9 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
           </div>
 
           <div>
-            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">No Penugasan Khusus</label>
+            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">
+              No Penugasan Khusus <span className="text-red-500 font-bold">*</span>
+            </label>
             <input 
               required
               type="text" 
@@ -195,7 +227,9 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
           </div>
 
           <div>
-            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Nama Penyulang</label>
+            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">
+              Nama Penyulang <span className="text-red-500 font-bold">*</span>
+            </label>
             <select 
               required
               className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary/10 outline-none font-bold text-sm bg-white"
@@ -208,7 +242,9 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
           </div>
 
           <div className="md:col-span-2">
-             <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Nama Keypoint</label>
+             <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">
+               Nama Keypoint {availableKeypoints.length > 0 && <span className="text-red-500 font-bold">*</span>}
+             </label>
              <div className="relative">
                 <select 
                   required={availableKeypoints.length > 0}
@@ -234,50 +270,60 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onCancel, master
           </div>
           
           <div>
-             <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Titik Start</label>
+             <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">
+               Titik Start <span className="text-red-500 font-bold">*</span>
+             </label>
              <input 
               required
               type="text" 
               className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary/10 outline-none font-bold text-sm transition-all"
-              placeholder="LOKASI MULAI PATROL"
+              placeholder="LOKASI MULAI PATROL (WAJIB DIISI)"
               value={titikStart}
               onChange={(e) => setTitikStart(e.target.value)}
             />
           </div>
 
           <div>
-             <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Titik Finish</label>
+             <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">
+               Titik Finish <span className="text-red-500 font-bold">*</span>
+             </label>
              <input 
               required
               type="text" 
               className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary/10 outline-none font-bold text-sm transition-all"
-              placeholder="LOKASI SELESAI PATROL"
+              placeholder="LOKASI SELESAI PATROL (WAJIB DIISI)"
               value={titikFinish}
               onChange={(e) => setTitikFinish(e.target.value)}
             />
           </div>
 
           <div>
-             <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Jumlah Tiang</label>
+             <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">
+               Jumlah Tiang <span className="text-red-500 font-bold">*</span>
+             </label>
              <input 
+              required
               type="number" 
               min="0"
               step="1"
               className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary/10 outline-none font-bold text-sm transition-all"
-              placeholder="JUMLAH TIANG YANG DIPATROL"
+              placeholder="JUMLAH TIANG YANG DIPATROL (WAJIB DIISI)"
               value={jumlahTiang}
               onChange={(e) => setJumlahTiang(e.target.value)}
             />
           </div>
 
           <div>
-             <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Jumlah KMS</label>
+             <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">
+               Jumlah KMS <span className="text-red-500 font-bold">*</span>
+             </label>
              <input 
+              required
               type="number" 
               min="0"
               step="any"
               className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary/10 outline-none font-bold text-sm transition-all"
-              placeholder="PANJANG KMS YANG DIPATROL"
+              placeholder="PANJANG KMS YANG DIPATROL (WAJIB DIISI)"
               value={jumlahKms}
               onChange={(e) => setJumlahKms(e.target.value)}
             />
